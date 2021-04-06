@@ -17,4 +17,4 @@ source("02_build/03c_precip.R")
 source("02_build/03d_whp.R")
 
 source("02_build/03e_elevation_ruggedness.R")
-source("")
+source("02_build/03f_oilgas_wells.R")

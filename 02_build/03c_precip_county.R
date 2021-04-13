@@ -2,7 +2,18 @@
 # from https://prism.oregonstate.edu
 
 rm(list = ls())
-tribedf <- read_rds("01_data/cache/tribe_shapefiles.rds")
+tribedf <- read_rds("01_data/cache/tribe_county_shapefiles.rds")
+tribecounties <- tribedf %>% 
+  dplyr::select(GEOID) %>% 
+  unique()
+
+empty <- tribecounties %>% 
+  mutate(area = as.numeric(st_area(geometry))) %>% 
+  st_set_geometry(NULL) %>% 
+  filter(area == 0)
+
+tribeuse <- tribecounties %>% 
+  filter(!GEOID %in% empty$GEOID)
 
 prism <- raster("01_data/PRISM_ppt_30yr_normal_4kmM2_annual_asc/PRISM_ppt_30yr_normal_4kmM2_annual_asc.asc")
 
@@ -11,16 +22,16 @@ slicecoords <- tibble(lon = xyFromCell(prism, 1:ncell(prism))[,1],
   rownames_to_column(var = "cell") %>% 
   mutate(cell = as.numeric(cell))
 
-extracted <- terra::extract(prism,tribedf,
+extracted <- terra::extract(prism,tribeuse,
                             weights = T, 
                             normalizeWeights = T,
                             cellnumbers = T)
 
 
-# e1 <- extracted[1]
-# UID <- tribedf$UID[1]
+e1 <- extracted[1]
+GEOID <- tribedf$GEOID[1]
 
-precip <- map2_dfr(extracted,tribedf$UID,function(e1,UID){
+precip <- map2_dfr(extracted,tribeuse$GEOID,function(e1,GEOID){
   
   e1dt <- e1 %>% 
     as.data.table()
@@ -29,21 +40,13 @@ precip <- map2_dfr(extracted,tribedf$UID,function(e1,UID){
     
     temp <- e1dt %>% 
       merge(., slicecoords, all.x=T, by="cell") %>%
-      .[, c("precip","UID") :=
-          .(value*weight,UID)] %>% 
-      group_by(UID) %>% 
+      .[, c("precip","GEOID") :=
+          .(value*weight,GEOID)] %>% 
+      group_by(GEOID) %>% 
       summarise(precip = sum(precip)) %>% 
       ungroup()
     
   } 
 })
 
-precipout <- precip %>% 
-  left_join(tribedf,.,by="UID") %>% 
-  st_set_geometry(NULL) %>% 
-  mutate(precipweight = precip*area_weighted) %>% 
-  group_by(UID) %>% 
-  summarise(precip = mean(precipweight)) %>% 
-  ungroup()
-
-write_rds(precipout,"01_data/clean/c_precip.rds")
+write_rds(precip,"01_data/clean/c_precip_county.rds")

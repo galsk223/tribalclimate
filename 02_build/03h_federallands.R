@@ -44,6 +44,3 @@ padsave <- pad %>%
   replace_na(list(PADPortion = 0))
 
 write_rds(padsave,"01_data/clean/h_federalland.rds")  
-  
-  
-  

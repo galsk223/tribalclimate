@@ -1,21 +1,36 @@
 
 rm(list = ls())
-tribedf <- read_rds("01_data/cache/tribe_shapefiles.rds") %>% 
+tribedf <- read_rds("01_data/cache/tribe_county_shapefiles.rds")
+tribecounties <- tribedf %>% 
+  dplyr::select(GEOID) %>% 
+  unique()
+
+empty <- tribecounties %>% 
+  mutate(area = as.numeric(st_area(geometry))) %>% 
+  st_set_geometry(NULL) %>% 
+  filter(area == 0)
+
+tribeuse <- tribecounties %>% 
+  filter(!GEOID %in% empty$GEOID) %>% 
   st_transform(5070)
 
 # t <- unique(tribedf$UID)[1]
 
 #Begin loop over counties
-done <- tibble(files = list.files("01_data/cache/elevationruggedness/")) %>% 
-  mutate(UID = str_sub(files,1,-5))
+done <- tibble(files = list.files("01_data/cache/elevationruggedness_county/")) %>% 
+  mutate(GEOID = str_sub(files,1,-5))
 
-tribedo <- tribedf %>% 
-  filter(!UID %in% done$UID)
+if(nrow(done)==0){
+  tribedo <- tribeuse
+} else {
+  tribedo <- tribeuse %>% 
+    filter(!GEOID %in% done$GEOID)
+}
 
-map(unique(tribedo$UID),function(t){
+map(unique(tribedo$GEOID),function(t){
   
-  tribenow <- tribedf %>% 
-    filter(UID == t)
+  tribenow <- tribeuse %>% 
+    filter(GEOID == t)
   
   #Generate DEM for county
   elev.raster <- get_elev_raster(tribenow,z=9,expand = 1)
@@ -40,16 +55,16 @@ map(unique(tribedo$UID),function(t){
                        median=quantile(.,p=.5,na.rm=T),
                        q75=quantile(.,p=.25,na.rm=T),
                        max=max(.,na.rm=T)))  %>% 
-    mutate(UID = t)
+    mutate(GEOID = t)
   
-  write_rds(out, paste0("01_data/cache/elevationruggedness/",t,".rds"))
+  write_rds(out, paste0("01_data/cache/elevationruggedness_county/",t,".rds"))
   return(out)
   
 }) 
 
 
 
-fl <- list.files("01_data/cache/elevationruggedness/", full.names = T)
+fl <- list.files("01_data/cache/elevationruggedness_county/", full.names = T)
 
 wire.save <- map_dfr(fl,function(f){
   
@@ -57,7 +72,7 @@ wire.save <- map_dfr(fl,function(f){
   
 })
 
-write_rds(wire.save,"01_data/clean/e_ElevationAndRuggedness.rds")
+write_rds(wire.save,"01_data/clean/e_ElevationAndRuggedness_County.rds")
 
 
 

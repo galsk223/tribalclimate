@@ -41,13 +41,13 @@ bridge.pdsi <- map2_dfr(extracted,tribedf$UID,function(e1,UID){
   } 
 })
 
-heatout <- heat %>% 
-  left_join(tribedf,.,by="UID") %>% 
-  st_set_geometry(NULL) %>% 
-  mutate(heatweight = heatdays*area_weighted, na.rm = T) %>% 
-  group_by(UID) %>% 
-  summarise(heatdays = sum(heatweight)) %>% 
-  ungroup()
+# heatout <- heat %>% 
+#   left_join(tribedf,.,by="UID") %>% 
+#   st_set_geometry(NULL) %>% 
+#   mutate(heatweight = heatdays*area_weighted, na.rm = T) %>% 
+#   group_by(UID) %>% 
+#   summarise(heatdays = sum(heatweight)) %>% 
+#   ungroup()
 
 
 

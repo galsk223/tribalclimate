@@ -1,6 +1,7 @@
 
 rm(list = ls())
-tribedf <- read_rds("01_data/cache/tribe_shapefiles.rds")
+tribedf <- read_rds("01_data/cache/tribe_shapefiles.rds") 
+
 
 # download(url=str_c("http://www.northwestknowledge.net/metdata/data/pdsi.nc"),
 #          destfile = "01_data/pdsi.nc",
@@ -41,6 +42,7 @@ bridge.pdsi <- map2_dfr(extracted,tribedf$UID,function(e1,UID){
   } 
 })
 
+write_rds(bridge.pdsi,"01_data/cache/bridge_pdsi.rds")
 # heatout <- heat %>% 
 #   left_join(tribedf,.,by="UID") %>% 
 #   st_set_geometry(NULL) %>% 
@@ -84,9 +86,10 @@ var.cbsa <- inner_join(bridge.join,
                        by=c("lat","lon")) %>%
   pivot_longer(-c(lon,lat,weight,UID),
                names_to = "date",
-               values_to = "value")  %>% 
+               values_to = "value") %>% 
   group_by(UID,date) %>% 
-  summarise(weekPDSI = sum(value*weight)) %>% 
+  summarise(totalweight = sum(weight, na.rm = T),
+            weekPDSI = sum(value*weight/totalweight, na.rm = T)) %>% 
   ungroup() %>% 
   group_by(UID) %>% 
   summarise("1980-2020 Mean" = mean(weekPDSI)) %>% 

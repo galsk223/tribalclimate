@@ -122,7 +122,8 @@ var.cbsa <- map_dfr(bridge.join,function(bj){
                  names_to = "date",
                  values_to = "value")  %>% 
     group_by(GEOID,date) %>% 
-    summarise(weekPDSI = sum(value*weight)) %>% 
+    summarise(totalweight = sum(weight, na.rm = T),
+              weekPDSI = sum(value*weight/totalweight, na.rm = T)) %>% 
     ungroup() %>% 
     group_by(GEOID) %>% 
     summarise("1980-2020 Mean" = mean(weekPDSI)) %>% 

@@ -18,7 +18,7 @@ extracted <- terra::extract(heatraster,tribedf,
                             cellnumbers = T)
 
 
-# e1 <- extracted[1]
+e1 <- extracted[5]
 # UID <- tribedf$UID[1]
 
 heat <- map2_dfr(extracted,tribedf$UID,function(e1,UID){
@@ -33,7 +33,7 @@ heat <- map2_dfr(extracted,tribedf$UID,function(e1,UID){
       .[, c("heatdays","UID") :=
           .(value*weight,UID)] %>% 
       group_by(UID) %>% 
-      summarise(heatdays = sum(heatdays, na.rm = T)) %>% 
+      summarise(heatdays = mean(heatdays, na.rm = T)) %>% 
       ungroup()
     
   } 

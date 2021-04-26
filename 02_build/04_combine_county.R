@@ -15,19 +15,25 @@ tribeuse <- tribecounties %>%
 
 
 
-heat <- read_rds("01_data/clean/a_heat_county.rds")
-drought <- read_rds("01_data/clean/b_drought_county.rds")
+heat <- read_rds("01_data/clean/a_heat_gridmet_county.rds")
+drought <- read_rds("01_data/clean/b_drought_county.rds") %>% 
+  rename(drought_mean = `1980-2020 Mean`)
 precip <- read_rds("01_data/clean/c_precip_county.rds")
 whp <- read_rds("01_data/clean/d_whp_county.rds")
 elrug <- read_rds("01_data/clean/e_ElevationAndRuggedness_County.rds")
 
-OGwells <- read_rds("01_data/clean/f_OilGas_Wells_County.rds") %>% 
-  group_by(GEOID,Decade) %>% 
-  summarise(AllOGAreaPortion = mean(as.numeric(AllOGAreaPortion))) %>% 
-  ungroup() %>% 
-  pivot_wider(names_from = Decade,
-              names_prefix = "OGAreaPortion_",
-              values_from = AllOGAreaPortion) %>% 
+wells_oil <- read_rds("01_data/clean/f_Oil_wells_county.rds") %>% 
+  dplyr::select(GEOID,AllArea_OilPortion) %>% 
+  mutate(AllArea_OilPortion = as.numeric(AllArea_OilPortion)) %>% 
+  unique() %>% 
+  left_join(tribeuse,.,by="GEOID") %>% 
+  st_set_geometry(NULL) %>% 
+  replace(is.na(.), 0)
+
+wells_gas <- read_rds("01_data/clean/f_Gas_wells_county.rds") %>% 
+  dplyr::select(GEOID,AllArea_GasPortion) %>% 
+  mutate(AllArea_GasPortion = as.numeric(AllArea_GasPortion)) %>% 
+  unique() %>% 
   left_join(tribeuse,.,by="GEOID") %>% 
   st_set_geometry(NULL) %>% 
   replace(is.na(.), 0)
@@ -36,6 +42,15 @@ OGbasins <- read_rds("01_data/clean/g_OilGas_basins_county.rds") %>%
   st_set_geometry(NULL) 
 PAD <- read_rds("01_data/clean/h_federalland_county.rds")
 
+soc <- map_dfr(list.files("01_data/cache/soc_county", full.names = T),
+               function(fl){
+                 
+                 t <- read_rds(fl)
+                 
+               }) %>% 
+  group_by(GEOID) %>% 
+  summarise(SOC_mean = mean(Interpolated_15)) %>% 
+  ungroup()
 
 all <- tribedf %>% 
   st_set_geometry(NULL) %>% 
@@ -44,9 +59,11 @@ all <- tribedf %>%
   left_join(.,precip,by="GEOID") %>% 
   left_join(.,whp,by="GEOID") %>% 
   left_join(.,elrug,by="GEOID") %>% 
-  left_join(.,OGwells,by="GEOID") %>% 
+  left_join(.,wells_oil,by="GEOID") %>% 
+  left_join(.,wells_gas,by="GEOID") %>% 
   left_join(.,OGbasins,by="GEOID") %>% 
-  left_join(.,PAD,by="GEOID") 
+  left_join(.,PAD,by="GEOID") %>% 
+  left_join(.,soc,by="GEOID") 
 
 sums <- all %>% 
   dplyr::select(-contains(c("q25","q75","sd","min","median","max","GEOID","tribe"))) %>% 

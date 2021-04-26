@@ -20,7 +20,6 @@ library(tidyverse)
 library(knitr)
 library(scales)
 library(broom)
-library(ggbeeswarm)
 library(MASS)
 library(pscl)
 library(boot)
@@ -28,7 +27,6 @@ library(nlme)
 library(cplm)
 library(conflicted)
 library(fixest)
-library(sjPlot)
 library(stargazer)
 library(clubSandwich)
 library(srvyr)
@@ -42,87 +40,63 @@ source("support_functions.R")
 
 #######################
 #Load data
-t0 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
-  select(tribe,census_tribe) %>% 
-  unique() %>% 
-  group_by(tribe) %>% 
-  add_tally() %>% 
-  ungroup()
-
 t1 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
+  filter(time == "time 1") %>% 
+  select(tribe,GEOID = fips) %>% 
+  unique() 
+
+t2 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
+  filter(time == "time 2") %>% 
   select(tribe,UID = census_tribe) %>% 
-  unique() %>% 
   mutate(UID = str_extract(UID,"\\d+")) %>% 
+  unique() %>% 
   filter(!is.na(UID))
-t2 <- read_csv("../01_data/clean/00_all_newpolygons.csv") 
 
-join <- left_join(t1,t2,by=c("UID"))
+df1 <- read_csv("../01_data/clean/00_all_countypolygons.csv") %>% 
+  select(-tribe) %>% 
+  unique() %>% 
+  left_join(t1,.,by=c("GEOID")) %>% 
+  mutate(time = "time 1")
+df2 <- read_csv("../01_data/clean/00_all_newpolygons.csv") %>% 
+  left_join(.,t2,by="UID") %>% 
+  select(tribe, everything()) %>% 
+  mutate(time = "time 2")
 
-
-
-
-
-
-
-
-load("final_data.Rdata")
-
-topo <- read_csv("topo_us.csv") %>%
-  select(FIPS=geoid,elevation=elevation_mean,tri=tri_mean)
-
-# topo <- inner_join(
-#   read_csv("../topo_us.csv") %>%
-#   select(FIPS=geoid,elevation=elevation_mean),
-#   read_csv("../vrml.csv") %>%
-#   clean_names() %>%
-#   mutate(geoid=str_pad(geoid,5,"left","0")) %>%
-#   select(FIPS=geoid,tri=vrml))
-
-soil <- read_csv("county_soil_stats.csv") %>%
-  clean_names() %>%
-  select(FIPS=fips,soc=sand_mean)
-
-##########
-#Merge topo and soil data
-analysis_ds <- merged_data_record_all_long %>%
-  inner_join(topo) %>%
-  inner_join(soil)
-
-
-#Constructing datasets
-data_long <- distinct(analysis_ds, tribe, time, FIPS, .keep_all = TRUE) %>%
-  ungroup() %>%
+data_long_0 <- bind_rows(df1,df2) %>% 
+  select(tribe,GEOID,UID,time,everything()) %>% 
+  filter(!is.na(tribe)) %>% 
   mutate(tribe = factor(tribe),
          time = factor(time),
-         oil_avg = oil_avg/1000,   #converting to thousands
-         gas_avg = gas_avg/1000000)   #converting raw data in thousands to billions
+         whp = ifelse(is.na(whp),whp_mean,whp)) 
 
-data_t1and2_long <- filter(data_long, tribe %in% tribes_time1and2_lst$tribe)
+load("old_appendix/final_data.Rdata")
+
+data_t1and2_long_0 <- filter(data_long_0, tribe %in% tribes_time1and2_lst$tribe)
 
 #Constructing weights and survey objects
-data_long <- data_long %>%
+data_long <- data_long_0 %>%
   group_by(tribe,time) %>%
   summarise(wgt=1/n()) %>%
   ungroup() %>%
-  left_join(data_long,
+  left_join(data_long_0,
             .,
             by=c("tribe","time"))
 
 svy_data_long <- data_long %>% 
   as_survey_design(ids = tribe,weights = wgt)
 
-data_t1and2_long <- data_t1and2_long %>%
+data_t1and2_long <- data_t1and2_long_0 %>%
   group_by(tribe,time) %>%
   summarise(wgt=1/n()) %>%
   ungroup() %>%
-  left_join(data_t1and2_long,
+  left_join(data_t1and2_long_0,
             .,
             by=c("tribe","time"))
   
 svy_data_t1and2_long <- data_t1and2_long %>% 
   as_survey_design(ids = tribe,weights = wgt)
-
-source("make_drought_fig.R")
+# 
+# source("make_drought_fig.R")
 
 ```
 
@@ -195,34 +169,34 @@ for_summary <- vector("list",2)
 
 for_summary[[1]] <- data_long %>% 
   select(#`Number of CCEs`=n_unique_FIPS,
-         `Days over 100F`=h_100_hist,
-         `Drought`=drt_median,
+         `Days over 100F`=heatdays_mean,
+         `Drought`=drought_mean,
          `Precipitation`=precip,
-         `Wildfire Hazard Potential`=fire_mean,
-         `Elevation`=elevation,
-         `Ruggedness`=tri,
-         `Soil Organic Carbon`=soc,
-         `Oil and Gas Basin`=og_basin,
-         `Oil Production`=oil_avg,
-         `Gas Production`=gas_avg,
-         `Well Count`=og_well_count,
-         `Fraction Federal Land`=p_all) %>%
+         `Wildfire Hazard Potential`=whp,
+         `Elevation`=elevation_mean,
+         `Ruggedness`=tri_mean,
+         # `Soil Organic Carbon`=soc,
+         `Oil and Gas Basin`=BasinPortion,
+         `Oil Production`=AllArea_OilPortion,
+         `Gas Production`=AllArea_GasPortion,
+         `Fraction Federal Land`=PADPortion,
+         `Soil Organic Carbon`=SOC_mean) %>%
   as.data.frame()
 
 for_summary[[2]] <- data_t1and2_long %>% 
   select(#`Number of CCEs`=n_unique_FIPS,
-         `Days over 100F`=h_100_hist,
-         `Drought`=drt_median,
+         `Days over 100F`=heatdays_mean,
+         `Drought`=drought_mean,
          `Precipitation`=precip,
-         `Wildfire Hazard Potential`=fire_mean,
-         `Elevation`=elevation,
-         `Ruggedness`=tri,
-         `Soil Organic Carbon`=soc,
-         `Oil and Gas Basin`=og_basin,
-         `Oil Production`=oil_avg,
-         `Gas Production`=gas_avg,
-         `Well Count`=og_well_count,
-         `Fraction Federal Land`=p_all) %>%
+         `Wildfire Hazard Potential`=whp,
+         `Elevation`=elevation_mean,
+         `Ruggedness`=tri_mean,
+         # `Soil Organic Carbon`=soc,
+         `Oil and Gas Basin`=BasinPortion,
+         `Oil Production`=AllArea_OilPortion,
+         `Gas Production`=AllArea_GasPortion,
+         `Fraction Federal Land`=PADPortion,
+         `Soil Organic Carbon`=SOC_mean) %>%
   as.data.frame()
 
 
@@ -277,11 +251,11 @@ The results in Table \ref{tab:heat} suggest that the present-day lands experienc
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
-dep.var <- "h_100_hist"
+dep.var <- "heatdays_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
+model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
 model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
 model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
 model.shell[[5]] <- glm_clustered(dep.var,df=data_t1and2_long,family = "poisson")
 
@@ -304,11 +278,11 @@ Table \ref{tab:drought} present the results of the analysis of differences in dr
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
-dep.var <- "drt_median"
+dep.var <- "drought_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
+model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
 model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
 model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
 model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
 
@@ -330,9 +304,9 @@ Table \ref{tab:precip} present the results of the analysis of precipitation acro
 model.shell <- vector("list",5)
 dep.var <- "precip"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
+model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
 model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
 model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
 model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
 
@@ -353,11 +327,11 @@ The results in table \ref{tab:whp} suggest that present-day lands have higher wi
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
-dep.var <- "fire_mean"
+dep.var <- "whp"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
+model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
 model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
 model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
 model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
 
@@ -378,11 +352,11 @@ The results in table \ref{tab:elevation} suggest that the elevation of present-d
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
-dep.var <- "elevation"
+dep.var <- "elevation_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
+model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
 model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
 model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
 model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
 
@@ -402,11 +376,11 @@ The results in table \ref{tab:tri} suggest that present-day lands are more rugge
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
-dep.var <- "tri"
+dep.var <- "tri_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
+model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
 model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
 model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
 model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
 
@@ -428,11 +402,11 @@ The results in Table \ref{tab:soc} provide mixed evidence that the percent organ
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
-dep.var <- "soc"
+dep.var <- "SOC_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
+model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
 model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
 model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
 model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
 
@@ -452,13 +426,13 @@ Weighted OLS and Full Weighted OLS models show a significant increase in the lik
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
-dep.var <- "og_basin"
+dep.var <- "BasinPortion"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
+model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
 model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
 model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
-model.shell[[5]] <- glm_clustered(dep.var,df=data_t1and2_long,family = "binomial")
+model.shell[[5]] <- glm_clustered(dep.var,df=data_t1and2_long,family = "poisson")
 
 sg_table(model.shell,
          dep.name = "Presence of Subsurface Oil and Gas",
@@ -478,11 +452,11 @@ We compare annual oil production (measured in thousands of barrels) between hist
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
-dep.var <- "oil_avg"
+dep.var <- "AllArea_OilPortion"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
+model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
 model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
 model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
 model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
 
@@ -500,11 +474,11 @@ Drawing on the U.S. Department of Agriculture's natural gas production data (mea
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
-dep.var <- "gas_avg"
+dep.var <- "AllArea_GasPortion "
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
+model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
 model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
 model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
 model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
 
@@ -515,28 +489,7 @@ sg_table(model.shell,
          title = "Gas Production")
 ```
 
-
-## Oil and Gas Wells
-
-Utilizing U.S. Geological Survey data on well locations between 1859 - 2005, we evaluate differences in the total number of oil and gas wells between historical and present-day lands.  Table \ref{tab:og_well} shows the results of the OLS model and indicates that present-day CCEs have 94.82 more wells than historical CCEs.  We find additional evidence of this statistically significant and positive relationship in all other model specifications. 
-
-```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",5)
-dep.var <- "og_well_count"
-
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe","FIPS"))
-model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe","FIPS"))
-model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
-model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
-
-sg_table(model.shell,
-         dep.name = "Count of Oil and Gas Wells",
-         label = "tab:og_well",
-         column.labels = c("OLS","Weighted OLS","Full OLS","Full Weighted OLS","Tribe FE","OLS 2way"),
-         title = "Oil and Gas Wells")
-```
-
+\\\
 
 ## Federal Lands
 
@@ -545,21 +498,21 @@ Finally, we study the difference between proximity to federal lands during the h
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE}
 
 bezi_datat1t2 <- mutate(data_t1and2_long,
-                    p_all = ifelse(p_all >= 1, .99999, p_all)) %>%
+                    p_all = ifelse(PADPortion >= 1, .99999, PADPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
 bezi_data <- mutate(data_long,
-                    p_all = ifelse(p_all >= 1, .99999, p_all)) %>%
+                    p_all = ifelse(PADPortion >= 1, .99999, PADPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_modelt1t2 <- gamlss(p_all ~ time, family = BEZI, data = bezi_datat1t2, trace = F)
-bezi_model <- gamlss(p_all ~ time, family = BEZI, data = bezi_data, trace = F)
-ols_clustered_model_t1t2 <- ols_clustered(dep.var="p_all",df=data_t1and2_long,clust.var = "tribe")
-ols_clustered_model <- ols_clustered(dep.var="p_all",df=data_long,clust.var = "tribe")
+bezi_modelt1t2 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2, trace = F)
+bezi_model <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data, trace = F)
+ols_clustered_model_t1t2 <- ols_clustered(dep.var="PADPortion",df=data_t1and2_long,clust.var = "tribe")
+ols_clustered_model <- ols_clustered(dep.var="PADPortion",df=data_long,clust.var = "tribe")
 
-screenreg(list(bezi_modelt1t2,ols_clustered_model$results,bezi_model,ols_clustered_model_t1t2$results),
+texreg::screenreg(list(bezi_modelt1t2,ols_clustered_model$results,bezi_model,ols_clustered_model_t1t2$results),
        # custom.coef.map = list('mu (Intercept)' = 'Historical (Intercept)',
        #                        'mu timetime 2' = 'Present-day Change',
        #                        '(Intercept)' = 'Historical (Intercept)',
@@ -569,8 +522,6 @@ screenreg(list(bezi_modelt1t2,ols_clustered_model$results,bezi_model,ols_cluster
        digits = 3,
        ci.force = T
        )
-
-
 
 ```
 
@@ -584,13 +535,13 @@ screenreg(list(bezi_modelt1t2,ols_clustered_model$results,bezi_model,ols_cluster
 \hline
  & BEZI & Full BEZI & OLS & Full OLS \\
 \hline
-Historical (Intercept)    & $-1.54^{***}$ &   $-1.59^{***}$        & $0.067^{***}$   &   $0.075^{***}$               \\
-                     & $(-1.59;\ -1.49)$ &   $(-1.64;\ -1.55)$ &   $(0.051;\ 0.082)$    &   $(0.055;\ 0.094)$          \\
-Present-day Change     & $0.51^{***}$     &   $0.52^{***}$         & $0.078^{***}$   &   $0.077^{***}$              \\
-                     & $(0.39;\ 0.63)$   &   $(0.41;\ 0.63)$   &   $(0.045;\ 0.110)$   & $(0.044;\ 0.110)$            \\
+Historical (Intercept)    & $-4.693^{***}$ &   $-4.707^{***}$        & $0.007^{***}$   &   $0.075^{***}$               \\
+                     & $(-4.732;\ -4.653])$ &   $(-4.741;\ -4.673)$ &   $(0.006;\ 0.008)$    &   $(0.006;\ 0.008)$          \\
+Present-day Change     & $-0.610^{***}$     &   $0.592^{***}$         & $0.017^{***}$   &   $0.018^{***}$              \\
+                     & $(0.508;\  0.712)$   &   $(0.501;\  0.683)$   &   $(0.010;\ 0.023)$   & $(0.010;\ 0.026)$            \\
 
 \hline \\[-1.8ex]
-Obs.           & 8165                & 10314              &  8165   &    10314               \\
+Obs.           & 7545                & 8945              &  7545   &    8945               \\
 
 \hline 
 \hline \\[-1.8ex] 

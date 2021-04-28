@@ -1,4 +1,51 @@
 
+#Function to subset data
+df_subset <- function(rts){
+  
+  if (min(rts %in% c("air_federal","otsa","tdsa","air_state","sdtsa"))){
+    df2_rts <- df2 %>% 
+      filter(rt %in% rts)
+    df1_rts <- df1 %>% 
+      filter(tribe %in% df2_OK$tribe)
+    
+    data_long_rts_0 <- bind_rows(df1_rts,df2_rts) %>% 
+      select(tribe,GEOID,UID,time,everything()) %>% 
+      filter(!is.na(tribe)) %>% 
+      mutate(tribe = factor(tribe),
+             time = factor(time),
+             whp = ifelse(is.na(whp),whp_mean,whp)) 
+    
+    data_t1and2_long_rts_0 <- filter(data_long_rts_0, 
+                                     tribe %in% tribes_time1and2_lst$tribe)
+    
+    data_long_rts <- data_long_rts_0 %>%
+      group_by(tribe,time) %>%
+      summarise(wgt=1/n()) %>%
+      ungroup() %>%
+      left_join(data_long_rts_0,
+                .,
+                by=c("tribe","time"))
+    
+    data_t1and2_long_rts <- data_t1and2_long_rts_0 %>%
+      group_by(tribe,time) %>%
+      summarise(wgt=1/n()) %>%
+      ungroup() %>%
+      left_join(data_t1and2_long_rts_0,
+                .,
+                by=c("tribe","time"))
+    
+    return(list(data_long_rts,data_t1and2_long_rts))
+  } else {
+    
+    message("Pick a valid rt: air_federal, otsa, tdsa, air_state, sdtsa")
+    
+  }
+  
+}
+
+# data_long_rts <- df_subset(c("tdsa","sdtsa"))[[1]]
+# data_t1and2_long_rts <- df_subset("otsa")[[2]]
+
 
 #Function to coerce fixest object into stargazer table
 fixest_to_coeftest <- function(fixest.object,ds,clust.var){

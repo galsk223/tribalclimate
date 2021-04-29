@@ -6,7 +6,7 @@ df_subset <- function(rts){
     df2_rts <- df2 %>% 
       filter(rt %in% rts)
     df1_rts <- df1 %>% 
-      filter(tribe %in% df2_OK$tribe)
+      filter(tribe %in% df2_rts$tribe)
     
     data_long_rts_0 <- bind_rows(df1_rts,df2_rts) %>% 
       select(tribe,GEOID,UID,time,everything()) %>% 
@@ -34,7 +34,7 @@ df_subset <- function(rts){
                 .,
                 by=c("tribe","time"))
     
-    return(list(data_long_rts,data_t1and2_long_rts))
+    return(data_t1and2_long_rts)
   } else {
     
     message("Pick a valid rt: air_federal, otsa, tdsa, air_state, sdtsa")

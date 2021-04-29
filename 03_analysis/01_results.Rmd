@@ -37,12 +37,13 @@ conflict_prefer("filter", "dplyr")
 conflict_prefer("select", "dplyr")
 
 source("support_functions.R")
+load("old_appendix/final_data.Rdata")
 
 #######################
 #Load data
 t1 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
   filter(time == "time 1") %>% 
-  select(tribe,GEOID = fips) %>% 
+  select(tribe,GEOID = fips, rt) %>% 
   unique() 
 
 t2 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
@@ -50,27 +51,20 @@ t2 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>%
   select(tribe,UID = census_tribe, rt) %>% 
   mutate(UID = str_extract(UID,"\\d+")) %>% 
   unique() %>% 
-  filter(!is.na(UID))
+  filter(!is.na(UID),
+         !rt %in% c("tribalsub","sdtsa","tdsa"))
 
 df1 <- read_csv("../01_data/clean/00_all_countypolygons.csv") %>% 
   select(-tribe) %>% 
   unique() %>% 
   left_join(t1,.,by=c("GEOID")) %>% 
-  mutate(time = "time 1")
+  mutate(time = "time 1",
+         SOC_perc = SOC_mean/10)
 df2 <- read_csv("../01_data/clean/00_all_newpolygons.csv") %>% 
   inner_join(.,t2,by="UID") %>% 
   select(tribe, everything()) %>% 
-  mutate(time = "time 2") 
-
-df2_OK <- df2 %>% 
-  filter(rt == "otsa")
-df1_OK <- df1 %>% 
-  filter(tribe %in% df2_OK$tribe)
-
-df2_nonOK <- df2 %>% 
-  filter(rt != "otsa")
-df1_nonOK <- df1 %>% 
-  filter(tribe %in% df2_nonOK$tribe)
+  mutate(time = "time 2",
+         SOC_perc = SOC_mean/10) 
 
 data_long_0 <- bind_rows(df1,df2) %>% 
   select(tribe,GEOID,UID,time,everything()) %>% 
@@ -79,29 +73,10 @@ data_long_0 <- bind_rows(df1,df2) %>%
          time = factor(time),
          whp = ifelse(is.na(whp),whp_mean,whp)) 
 
-data_long_OK_0 <- bind_rows(df1_OK,df2_OK) %>% 
-  select(tribe,GEOID,UID,time,everything()) %>% 
-  filter(!is.na(tribe)) %>% 
-  mutate(tribe = factor(tribe),
-         time = factor(time),
-         whp = ifelse(is.na(whp),whp_mean,whp)) 
-
-data_long_nonOK_0 <- bind_rows(df1_nonOK,df2_nonOK) %>% 
-  select(tribe,GEOID,UID,time,everything()) %>% 
-  filter(!is.na(tribe)) %>% 
-  mutate(tribe = factor(tribe),
-         time = factor(time),
-         whp = ifelse(is.na(whp),whp_mean,whp)) 
-
-
-load("old_appendix/final_data.Rdata")
-
 data_t1and2_long_0 <- filter(data_long_0, tribe %in% tribes_time1and2_lst$tribe)
-data_t1and2_long_OK_0 <- filter(data_long_OK_0, tribe %in% tribes_time1and2_lst$tribe)
-data_t1and2_long_nonOK_0 <- filter(data_long_nonOK_0, tribe %in% tribes_time1and2_lst$tribe)
 
 #Constructing weights and survey objects
-data_long <- data_long_0 %>%
+data_long_m1_full <- data_long_0 %>%
   group_by(tribe,time) %>%
   summarise(wgt=1/n()) %>%
   ungroup() %>%
@@ -109,27 +84,10 @@ data_long <- data_long_0 %>%
             .,
             by=c("tribe","time"))
 
-svy_data_long <- data_long %>% 
+svy_data_long <- data_long_m1_full %>% 
   as_survey_design(ids = tribe,weights = wgt)
 
-data_long_OK <- data_long_OK_0 %>%
-  group_by(tribe,time) %>%
-  summarise(wgt=1/n()) %>%
-  ungroup() %>%
-  left_join(data_long_OK_0,
-            .,
-            by=c("tribe","time"))
-
-data_long_nonOK <- data_long_nonOK_0 %>%
-  group_by(tribe,time) %>%
-  summarise(wgt=1/n()) %>%
-  ungroup() %>%
-  left_join(data_long_nonOK_0,
-            .,
-            by=c("tribe","time"))
-
-
-data_t1and2_long <- data_t1and2_long_0 %>%
+data_long_m1 <- data_t1and2_long_0 %>%
   group_by(tribe,time) %>%
   summarise(wgt=1/n()) %>%
   ungroup() %>%
@@ -137,26 +95,11 @@ data_t1and2_long <- data_t1and2_long_0 %>%
             .,
             by=c("tribe","time"))
   
-svy_data_t1and2_long <- data_t1and2_long %>% 
+svy_data_t1and2_long <- data_long_m1 %>% 
   as_survey_design(ids = tribe,weights = wgt)
 
-
-data_t1and2_long_OK <- data_t1and2_long_OK_0 %>%
-  group_by(tribe,time) %>%
-  summarise(wgt=1/n()) %>%
-  ungroup() %>%
-  left_join(data_t1and2_long_OK_0,
-            .,
-            by=c("tribe","time"))
-
-data_t1and2_long_nonOK <- data_t1and2_long_nonOK_0 %>%
-  group_by(tribe,time) %>%
-  summarise(wgt=1/n()) %>%
-  ungroup() %>%
-  left_join(data_t1and2_long_nonOK_0,
-            .,
-            by=c("tribe","time"))
-
+data_long_m2_noOK <- df_subset(c("air_federal","air_state"))
+data_long_m3_OK <- df_subset(c("otsa"))
 
 # 
 # source("make_drought_fig.R")
@@ -182,7 +125,7 @@ Table \ref{tab:sum_full} contains summary statistics for the dataset used in the
 
 
 ## Heat
-We construct a metric following Dahl et al.'s measure of the average number of days per year between 1971 to 2000 with a Heat Index greater than 100 degrees Farenheit (Dahl et al. 2019). To do so, we use the daily maximum temperature gridded (4km resolution) across the continental US from gridMET (Abatzoglou, 2013). For each grid cell, we aggregate the number of days in a year that exceed 100 degrees Farenheit. We then aggregate the mean of hot days over all grid cells contained in the polygon, and finally, over the available years of 1979-2000, we use the average number of mean hot days per year across a county or census tribal area in historical and present-day time periods, respectively.
+We construct a metric following Dahl et al.'s measure of the average number of days per year between 1971 to 2000 with a Heat Index greater than 100 degrees Farenheit (Dahl et al. 2019). To do so, we use the daily maximum temperature gridded (4km resolution) across the continental US from gridMET (Abatzoglou, 2013). For each grid cell, we aggregate the number of days in a year that exceed 100 degrees Farenheit. We then aggregate the mean of hot days over all grid cells contained in the polygon (weighted by the area of the cell contained within the boundary), and finally, over the available years of 1979-2000, we use the average number of mean hot days per year across a county or census tribal area in historical and present-day time periods, respectively.
 
 
 ## Drought
@@ -190,7 +133,7 @@ We measure drought conditions as the Palmer Drought Severity Index (PDSI). The P
  
  
 ## Precipitation
-Oregon State University's PRISM Climate Group calculates average precipitation (inches) over 30-year time periods. We use data that is calculated between 1981 and 2010 (PRISM Climate Group, ND).
+Oregon State University's PRISM Climate Group calculates average precipitation (inches) over 30-year time periods. We use data that is calculated between 1981 and 2010 (PRISM Climate Group, ND). We use a raster with a 4km extent, which we subset to the area of each polygon. The precipitation used for each tribal area is the the mean value found in each cell contained within the boundary, weighted by the amount of grid cell area within the tribal area boundary.
 
 
 ## Wildfire Hazard Potential
@@ -198,29 +141,24 @@ A changing climate is expected to alter wildfire behavior in the US, and particu
 
 
 ## Elevation
-
 We extract elevation data from an open-source digital elevation model (DEM) accessed via the elevatr package in R (Hollister and Shah, 2017).  The data sources for the package are high resolution gridded elevation estimates from the U.S. Geological Survey’s Global Multi-resolution Terrain Elevation Data 2010 (GMTED2010) and Amazon Web Service's Mapzen Terrain Tiles (U.S. Geological Survey and National Geospatial Intelligence Agency, 2010). The DEM contains elevation in meters at 100 meter resolution across the US.  We calculate the average elevation across all pixels in the county or tribal area to construct a mean elevation.
 
 
 ## Ruggedness
-
-We calculate a ruggedness index based on the digital elevation model.  We use the *raster* package in R (Hijmans, 2020), which states that the Total Ruggedness Index is “... the mean of the absolute differences between the value of a cell [elevation] and the value of its 8 surrounding cells (Wilson et al., 2007).”  The ruggedness is calculated at approximately 100 meter resolution for every county or tribal area.  For each polygon, we calculate the mean Total Ruggedness Index for consistency with the tribal boundary data and other measurements in the analysis.
+We use the ruggedness index also available in the the digital elevation model. We refer to the *raster* package in R (Hijmans, 2020), which states that the Total Ruggedness Index is “... the mean of the absolute differences between the value of a cell [elevation] and the value of its 8 surrounding cells (Wilson et al., 2007).”  The ruggedness is calculated at approximately 100 meter resolution for every county or tribal area.  For each polygon, we extract the mean Total Ruggedness Index for consistency with the tribal boundary data and other measurements in the analysis.
 
 
 ## Soil Organic Carbon 
+Ramcharan et. al. (2017) utilize random forest and gradient boosting algorithms to predict soil properties across the United States (Ramcharan et al. 2017), creating a spatially explicit  dataset over the contiguous U.S., gridded at a 100m resolution. We report changes in soil organic carbon (SOC), between historical and present-day lands in this appendix. However, soil health - and proxies for it, such as SOC - is dynamically influenced by the interaction between natural processes and human activities (Stevens, 2018; Haddaway et al 2017). For this reason, the measure itself is not sufficiently durable over time to be an appropriate selection for our primary research design, and is therefore excluded from the manuscript. We include results in the appendix as a starting point for future research which may investigate soil- and agriculture-focused research questions in greater depth.
 
-Ramcharan et. al. (2017) utilize random forest and gradient boosting algorithms to predict soil properties across the United States (Ramcharan et al. 2017), which are then aggregated to the tribal boundary-level using the data processing technique described by Kane et al. (2020). We report changes in soil organic carbon (SOC), between historical and present-day lands in this appendix. However, soil health - and proxies for it, such as SOC - is dynamically influenced by the interaction between natural processes and human activities (Stevens, 2018; Haddaway et al 2017). For this reason, the measure itself is not sufficiently durable over time to be an appropriate selection for our primary research design, and is therefore excluded from the manuscript. We include results in the appendix as a starting point for future research which may investigate soil- and agriculture-focused research questions in greater depth.
-
-
+We follow the data processing technique described by Kane et al. (2020). We first stack the rasters for SOC parts per mil at 5, 15, and 30 cm. Then we intersect the raster stack with the relevant spatial polygons, and for each polygon regress the SOC levels in parts per mil on the depth to derive a linear relationship between depth and SOC. We add the estimated intercept to 15 times the estimated coefficient on depth to get an interpolated value of SOC at 15cm. Finally we divide by 10 to convert to a percentage.
+ 
+ 
 ## Oil and Gas Basins
 The U.S. Energy Information Administration provides a map of sedimentary basin boundaries within the continental United States(U.S. Energy Information Administration, n.d.). Using this map, we construct a variable of the portion of land within a tribal area that overlaps an oil or gas basin. 
 
 
 ## Oil and Gas Production
-The U.S. Department of Agriculture reports gross withdraws of oil and gas at the county level between 2000 and 2011. We take the average count of barrels of oil produced (thousands) and natural gas extracted (billion cubic feet) over this time period (U.S. Department of Agriculture Economic Research Service, 2019). 
-
-
-## Oil and Gas Wells
 The U.S. Geological Survey reports all known well locations across the continental United States between 1859 and 2005. The mapped area is divided into one-quarter square mile grid cells, where cells with wells are coded as either predominantly oil-producing, gas-producing, both oil- and gas-producing, or the wells are dry or their production status is unknown (Biewick, 2008). To create a measure of oil production, we aggregate over the 146-year period the portion of unique land that has at any point been coded as oil-producing or both oil- and gas-producing of a tribal area. We create a corresponding measure of gas production by similarly aggregating the gas-producing and both oil- and gas-producing cells.
 
 
@@ -232,36 +170,32 @@ The U.S. Geological Survey's Protected Lands Database of the U.S. (PAD-US) is a 
 
 for_summary <- vector("list",2)
 
-for_summary[[1]] <- data_long %>% 
-  select(#`Number of CCEs`=n_unique_FIPS,
-         `Days over 100F`=heatdays_mean,
+for_summary[[1]] <- data_long_m1 %>% 
+  select(`Days over 100F`=heatdays_mean,
          `Drought`=drought_mean,
          `Precipitation`=precip,
          `Wildfire Hazard Potential`=whp,
          `Elevation`=elevation_mean,
          `Ruggedness`=tri_mean,
-         # `Soil Organic Carbon`=soc,
+         `Soil Organic Carbon`=SOC_perc,
          `Oil and Gas Basin`=BasinPortion,
          `Oil Production`=AllArea_OilPortion,
          `Gas Production`=AllArea_GasPortion,
-         `Fraction Federal Land`=PADPortion,
-         `Soil Organic Carbon`=SOC_mean) %>%
+         `Fraction Federal Land`=PADPortion) %>%
   as.data.frame()
 
-for_summary[[2]] <- data_t1and2_long %>% 
-  select(#`Number of CCEs`=n_unique_FIPS,
-         `Days over 100F`=heatdays_mean,
+for_summary[[2]] <- data_long_m1_full %>% 
+  select(`Days over 100F`=heatdays_mean,
          `Drought`=drought_mean,
          `Precipitation`=precip,
          `Wildfire Hazard Potential`=whp,
          `Elevation`=elevation_mean,
          `Ruggedness`=tri_mean,
-         # `Soil Organic Carbon`=soc,
+         `Soil Organic Carbon`=SOC_perc,
          `Oil and Gas Basin`=BasinPortion,
          `Oil Production`=AllArea_OilPortion,
          `Gas Production`=AllArea_GasPortion,
-         `Fraction Federal Land`=PADPortion,
-         `Soil Organic Carbon`=SOC_mean) %>%
+         `Fraction Federal Land`=PADPortion) %>%
   as.data.frame()
 
 
@@ -316,42 +250,37 @@ The results in Table \ref{tab:heat} suggest that the present-day lands experienc
 model.shell <- vector("list",5)
 dep.var <- "heatdays_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
-model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
-model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
-model.shell[[5]] <- glm_clustered(dep.var,df=data_t1and2_long,family = "poisson")
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[5]] <- glm_clustered(dep.var,df=data_long_m1,family = "poisson")
 
 sg_table(model.shell,
          dep.name = "Days per Year in excess of 100 degrees F",
-         column.labels = c("OLS","Weighted OLS","Full OLS","Full Weighted OLS","Poisson","OLS 2way"),
+         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Poisson"),
          label = "tab:heat",
          title = "Extreme Heat")
 ```
-
-
 
 
 ## Drought
 
 Table \ref{tab:drought} present the results of the analysis of differences in drought across the historical and present-day lands.  Our variable is the change in drought over time.  The coefficients on historical indicate that even the historical lands are experiencing more drought.  The coefficients on present-day change indicate that present day lands are becoming even drier.  OLS, Weighted OLS, Full OLS, and Tribe Fixed Effects models all indicate that present-day lands are about twice as dry as historical lands, with point estimates ranging between -0.06 (Weighted OLS) and -0.18 (OLS).  
 
-
-
-
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
 dep.var <- "drought_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
-model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
-model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
-model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
-         dep.name = "Median PDSI",
-         column.labels = c("OLS","Weighted OLS","Full OLS","Full Weighted OLS","Tribe FE","OLS 2way"),
+         dep.name = "Mean PDSI",
+         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
          label = "tab:drought",
          title = "Drought")
 ```
@@ -361,21 +290,19 @@ sg_table(model.shell,
 
 Table \ref{tab:precip} present the results of the analysis of precipitation across the historical and present-day lands.   The coefficients on Historical across models range from 899 mm to 994 mm of precipitation each year on historical lands. While the estimates in the unweighted models are statistically insignificant, the weighted models suggest an increase in precipitation of around 58 mm per year (Weighted OLS) or 135 mm per year (Full Weighted OLS).  These results suggest that on average tribes are now in areas with higher precipitation but that larger tribes were relocated to areas with more variable precipitation patterns (insignificant estimates). 
 
-
-
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
 dep.var <- "precip"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
-model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
-model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
-model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Mean Annual Precipitation",
-         column.labels = c("OLS","Weighted OLS","Full OLS","Full Weighted OLS","Tribe FE","OLS 2way"),
+         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
          label = "tab:precip",
          title = "Precipitation")
 ```
@@ -383,50 +310,44 @@ sg_table(model.shell,
 
 ## Wildfire Hazard Potential
 
-
-
 The results in table \ref{tab:whp} suggest that present-day lands have higher wildfire hazard potential (WHP) compared to historical lands.  The coefficients on Historical indicate that the historical lands have an average WHP rating of around 1 on a scale of 1 (very low fire hazard potential) to 5 (very high hazard potential). The results indicate that the present-day lands have a higher WHP than the historical lands by 0.55 points on the index, a 47% increase.  This estimate is robust to several alternative specifications, including the Full OLS and Tribe Fixed Effects models. The Full Weighted OLS model is the only specification which estimates a reduction in WHP in the present day. This suggests that tribes with a broader historical spread across many CCE's experienced greater increases in WHP, while tribes with less historical spread across CCE's did not. While wildfire hazard potential is a function of the natural environment, it is also influenced by human modifications of the natural and built environment.  
-
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
 dep.var <- "whp"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
-model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
-model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
-model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Mean Wildfire Hazard Potential",
          label = "tab:whp",
-         column.labels = c("OLS","Weighted OLS","Full OLS","Full Weighted OLS","Tribe FE","OLS 2way"),
+         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
          title = "Wildfire Hazard Potential")
 ```
-
 
 
 ## Elevation
 
 The results in table \ref{tab:elevation} suggest that the elevation of present-day lands is greater than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE elevation of 541.46 meters. The results indicate that the present-day lands are an average of 196.43 meters higher than the historical lands, a 36% increase.  While we find similar results with the Full OLS model, the weighted models and Tribe FE model indicate no or a small decrease in elevation. These  results suggests that tribes with a broader historical spread across many CCE's experienced a small decrease in elevation.  The weighted versions of the model compare across tribes rather than the population and extent of the peoples in the tribe.
 
-
-
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
 dep.var <- "elevation_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
-model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
-model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
-model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Elevation",
          label = "tab:elevation",
-         column.labels = c("OLS","Weighted OLS","Full OLS","Full Weighted OLS","Tribe FE","OLS 2way"),
+         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
          title = "Elevation (meters)")
 ```
 
@@ -435,48 +356,42 @@ sg_table(model.shell,
 
 The results in table \ref{tab:tri} suggest that present-day lands are more rugged than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE ruggedness index of 5.36. The results indicate that the present-day lands have an average ruggedness index 3.14 points higher than the historical lands, a 59% increase.  While we find similar results with the Full OLS model, the weighted models and Tribe FE model indicate no difference between historical and present-day ruggedness. 
 
-
-
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
 dep.var <- "tri_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
-model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
-model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
-model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Ruggedness",
          label = "tab:tri",
-         column.labels = c("OLS","Weighted OLS","Full OLS","Full Weighted OLS","Tribe FE","OLS 2way"),
+         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
          title = "Total Ruggedness Index")
 ```
-
 
 
 ## Soil Organic Carbon
 
 The results in Table \ref{tab:soc} provide mixed evidence that the percent organic carbon is greater in present-day lands compared to historical lands. Our primary OLS model indicates that present-day lands have 8.25 percentage points higher SOC content than historical lands. While the Full OLS model yields similar results in direction and magnitude, both Weighted OLS and Tribe FE models suggest that the magnitude of increase was relatively small and insignificant. The Full Weighted OLS model suggests that SOC levels are lower in the present day. We do not report these results in the manuscript because the measure of organic carbon is not durable over time (see notes in Data Description).
 
-
-
-
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
-dep.var <- "SOC_mean"
+dep.var <- "SOC_perc"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_t1and2_long,clust.var = c("tribe"))
-model.shell[[2]] <- ols_weighted(dep.var,df=svy_data_t1and2_long)
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long,clust.var = c("tribe"))
-model.shell[[4]] <- ols_weighted(dep.var,df=svy_data_long)
-model.shell[[5]] <- feols_clustered(dep.var,df=data_t1and2_long)
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Soil Organic Carbon",
          label = "tab:soc",
-         column.labels = c("OLS","Weighted OLS","Full OLS","Full Weighted OLS","Tribe FE","OLS 2way"),
+         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
          title = "Soil Organic Carbon")
 ```
 
@@ -487,276 +402,297 @@ We evaluate access to oil and gas based on the likelihood that a tribe's CCEs li
 
 Weighted OLS and Full Weighted OLS models show a significant increase in the likelihood for present-day lands to have access to oil and gas reserves. In contrast, the unweighted model results suggests that tribes with larger historical lands experienced reductions in oil and gas access. This result, again, highlights the variation across tribes in the dataset.
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE}
+```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
 
-bezi_datat1t2 <- mutate(data_t1and2_long,
+bezi_data_m1 <- mutate(data_long_m1,
                     p_all = ifelse(BasinPortion >= 1, .99999, BasinPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_data <- mutate(data_long,
+bezi_data_m1_full <- mutate(data_long_m1_full,
                     p_all = ifelse(BasinPortion >= 1, .99999, BasinPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_datat1t2_OK <- mutate(data_t1and2_long_OK,
+bezi_data_m2_noOK <- mutate(data_long_m2_noOK,
                     p_all = ifelse(BasinPortion >= 1, .99999, BasinPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_datat1t2_nonOK <- mutate(data_t1and2_long_nonOK,
+bezi_data_m3_OK <- mutate(data_long_m3_OK,
                     p_all = ifelse(BasinPortion >= 1, .99999, BasinPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_modelt1t2 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2, trace = F)
-bezi_model <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data, trace = F)
-bezi_modelt1t2_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2_OK, trace = F)
-bezi_modelt1t2_nonOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2_nonOK, trace = F)
+bezi_model1 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1, trace = F)
+bezi_model1_full <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1_full, trace = F)
+bezi_model2_noOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m2_noOK, trace = F)
+bezi_model3_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m3_OK, trace = F)
 
-texreg::screenreg(list(bezi_modelt1t2,bezi_model,bezi_modelt1t2_OK,bezi_modelt1t2_nonOK),
-       # custom.coef.map = list('mu (Intercept)' = 'Historical (Intercept)',
-       #                        'mu timetime 2' = 'Present-day Change',
-       #                        '(Intercept)' = 'Historical (Intercept)',
-       #                        'timetime 2' = 'Present-day Change'
-       #                        ),
-       custom.model.names = c("BEZI","Full BEZI","BEZI - OK", "BEZI - nonOK"),
+texreg::screenreg(list(bezi_model1,bezi_model1_full,bezi_model2_noOK,bezi_model3_OK),
+       omit.coef = c("nu|sigma"),
+       caption = "Dependent Variable: Portion Land With Subsurface Oil and Gas",
+       caption.above = T,
+       label = "tab:og_basins",
+       custom.coef.names = c('mu (Intercept)' = 'Historical (Intercept)',
+                              'mu timetime 2' = 'Present-day Change'),
+       custom.model.names = c("BEZI","BEZI | All Tribes","BEZI | Excluding OK", "BEZI | Only OK"),
        digits = 3,
-       ci.force = T
+       # stars = c(0.001, 0.01, 0.05, 0.1),
+       # symbol = c('$^{***}$','$^{**}$','$^{*}$','.'),
+       ci.force = T,
+       table = FALSE, use.packages = FALSE
        )
 
 ```
 
-\begin{sidewaystable}[!htbp] \centering 
-  \caption{Prevalence of Oil Production} 
-  \label{tab:pub_lands} 
+\begin{sidewaystable}[!htbp] \centering
+  \caption{Oil and Gas Basins}
+  \label{tab:og_basins}
 \begin{tabular}{l c c c c }
-\\[-1.8ex]\hline 
-\hline \\[-1.8ex] 
- & \multicolumn{4}{c}{Dependent Variable: Portion Land Used in Oil Production} \\ 
+\\[-1.8ex]\hline
+\cline{2-6} \\[-1.8ex]
+ & \multicolumn{4}{c}{Dependent Variable: Portion Land With Subsurface Oil and Gas} \\
 \hline
- & BEZI & Full BEZI & OLS & Full OLS \\
+ & BEZI & BEZI | All Tribes & BEZI | Excluding OK & BEZI | Only OK \\
 \hline
-Historical (Intercept)    & $-1.532^{***}$ &   $-1.592^{***}$        & $0.068^{***}$   &   $0.075^{***}$               \\
-                     & $(-1.581;\ -1.482)$ &   $(-1.637;\ -1.547)$ &   $(0.053;\  0.083)$    &   $(0.057;\  0.092)$          \\
-Present-day Change     & $0.248^{*}$     &   $0.326^{**}$         & $-0.040^{***}$   &   $-0.044^{***}$              \\
-                     & $(-0.028;\  0.523)$   &   $(0.069;\ 0.583)$   &   $(-0.058;\ -0.023)$   & $(-0.064;\ -0.023)$            \\
+Historical (Intercept)    & $1.195^{***}$ &   $1.155 ^{***}$        & $1.150 ^{***}$   &   $1.297 ^{***}$               \\
+                     & $(1.146;\ 1.244)$ &   $(1.111;\ 1.198)$ &   $(1.090;\ 1.210)$    &   $(1.235;\ 1.360)$          \\ \
+Present-day Change     & $0.240.$     &   $0.326^{**}$         & $0.363 ^{*}$   &   $0.028$              \\
+                     & $(-0.016;\ 0.497)$   &   $(0.094;\ 0.557)$   &   $(0.038;\ 0.687)$   & $(-0.387;\ 0.442)$            \\
 
 \hline \\[-1.8ex]
-Obs.           & 7545                & 9845              &  7545   &    9845               \\
+Obs.           & 7516                & 9796              &  5538   &    3733               \\
 
-\hline 
-\hline \\[-1.8ex] 
+\hline
+\hline \\[-1.8ex]
 \multicolumn{5}{l}{{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01}}
 \end{tabular}
 
 
-\end{sidewaystable} 
-
+\end{sidewaystable}
 
 
 ## Oil Production
 
 We compare annual oil production (measured in thousands of barrels) between historical and present-day lands, with model specifications providing some evidence that there is less oil production on present-day CCEs (Table \ref{tab:oil_avg}). While our primary OLS specification shows a statistically insignificant reduction in oil production (123 thousand barrels), additional model specifications show significant reductions.  When the full dataset is included, the average oil production of present-day CCEs falls by 334 thousand barrels per year, a 50% reduction from the average across the historical CCEs (783 thousand barrels).
 
+```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE}
-
-bezi_datat1t2 <- mutate(data_t1and2_long,
+bezi_data_m1 <- mutate(data_long_m1,
                     p_all = ifelse(AllArea_OilPortion >= 1, .99999, AllArea_OilPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_data <- mutate(data_long,
+bezi_data_m1_full <- mutate(data_long_m1_full,
                     p_all = ifelse(AllArea_OilPortion >= 1, .99999, AllArea_OilPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_datat1t2_OK <- mutate(data_t1and2_long_OK,
+bezi_data_m2_noOK <- mutate(data_long_m2_noOK,
                     p_all = ifelse(AllArea_OilPortion >= 1, .99999, AllArea_OilPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_datat1t2_nonOK <- mutate(data_t1and2_long_nonOK,
+bezi_data_m3_OK <- mutate(data_long_m3_OK,
                     p_all = ifelse(AllArea_OilPortion >= 1, .99999, AllArea_OilPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_modelt1t2 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2, trace = F)
-bezi_model <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data, trace = F)
-bezi_modelt1t2_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2_OK, trace = F)
-bezi_modelt1t2_nonOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2_nonOK, trace = F)
+bezi_model1 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1, trace = F)
+bezi_model1_full <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1_full, trace = F)
+bezi_model2_noOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m2_noOK, trace = F)
+bezi_model3_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m3_OK, trace = F)
 
-texreg::screenreg(list(bezi_modelt1t2,bezi_model,bezi_modelt1t2_OK,bezi_modelt1t2_nonOK),
-       # custom.coef.map = list('mu (Intercept)' = 'Historical (Intercept)',
-       #                        'mu timetime 2' = 'Present-day Change',
-       #                        '(Intercept)' = 'Historical (Intercept)',
-       #                        'timetime 2' = 'Present-day Change'
-       #                        ),
-       custom.model.names = c("BEZI","Full BEZI","BEZI - OK", "BEZI - nonOK"),
+texreg::screenreg(list(bezi_model1,bezi_model1_full,bezi_model2_noOK,bezi_model3_OK),
+       omit.coef = c("nu|sigma"),
+       caption = "Dependent Variable: Portion Land Used in Oil Production",
+       caption.above = T,
+       label = "tab:portion_oil",
+       custom.coef.names = c('mu (Intercept)' = 'Historical (Intercept)',
+                              'mu timetime 2' = 'Present-day Change'),
+       custom.model.names = c("BEZI","BEZI | All Tribes","BEZI | Excluding OK", "BEZI | Only OK"),
        digits = 3,
-       ci.force = T
+       # stars = c(0.001, 0.01, 0.05, 0.1),
+       # symbol = c('$^{***}$','$^{**}$','$^{*}$','.'),
+       ci.force = T,
+       table = FALSE, use.packages = FALSE
        )
 
-```
 
-\begin{sidewaystable}[!htbp] \centering 
-  \caption{Prevalence of Oil Production} 
-  \label{tab:pub_lands} 
+```
+\begin{sidewaystable}[!htbp] \centering
+  \caption{Prevalence of Oil Production}
+  \label{tab:og_oil}
 \begin{tabular}{l c c c c }
-\\[-1.8ex]\hline 
-\hline \\[-1.8ex] 
- & \multicolumn{4}{c}{Dependent Variable: Portion Land Used in Oil Production} \\ 
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+ & \multicolumn{4}{c}{Dependent Variable: Portion Land Used in Oil Production} \\
 \hline
- & BEZI & Full BEZI & OLS & Full OLS \\
+ & BEZI & BEZI | All Tribes & BEZI | Excluding OK & BEZI | Only OK \\
 \hline
-Historical (Intercept)    & $-1.532^{***}$ &   $-1.592^{***}$        & $0.068^{***}$   &   $0.075^{***}$               \\
-                     & $(-1.581;\ -1.482)$ &   $(-1.637;\ -1.547)$ &   $(0.053;\  0.083)$    &   $(0.057;\  0.092)$          \\
-Present-day Change     & $0.248^{*}$     &   $0.326^{**}$         & $-0.040^{***}$   &   $-0.044^{***}$              \\
-                     & $(-0.028;\  0.523)$   &   $(0.069;\ 0.583)$   &   $(-0.058;\ -0.023)$   & $(-0.064;\ -0.023)$            \\
+Historical (Intercept)    & $-1.532 ^{***}$ &   $-1.592  ^{***}$        & $-1.735  ^{***}$   &   $-1.371^{***}$               \\
+                     & $(-1.581;\ -1.482)$ &   $(-1.637;\ -1.547)$ &   $(-1.801;\ -1.670)$    &   $(-1.429;\ -1.313)$          \\
+Present-day Change     & $0.260.$     &   $0.319 ^{*}$         & $-0.156$   &   $0.831^{***} $              \\
+                     & $(-0.025;\  0.545)$   &   $(0.051;\  0.588)$   &   $(-0.553;\  0.240)$   & $(0.428;\  1.233)$            \\
 
 \hline \\[-1.8ex]
-Obs.           & 7545                & 9845              &  7545   &    9845               \\
+Obs.           & 7516                & 9796              &  5538   &    3733               \\
 
-\hline 
-\hline \\[-1.8ex] 
+\hline
+\hline \\[-1.8ex]
 \multicolumn{5}{l}{{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01}}
 \end{tabular}
 
 
-\end{sidewaystable} 
-
+\end{sidewaystable}
 
 ## Gas Production
 
 Drawing on the U.S. Department of Agriculture's natural gas production data (measured in billion cubic feet), we compare gas production between historical and present-day lands.  Our estimates indicate that gas production increased by 4.29 billion cubic feet per year in present-day CCEs up from 6.1 billion cubic feet on the historical CCEs (Table \ref{tab:gas_avg}).  However, these results do not seem to be robust across specifications.  Additional model specification yield mixed results. The Weighted, Full Weighted OLS, and Tribe Fixed Effects models show insignificant changes in gas production between time periods. 
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE}
+```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
 
-bezi_datat1t2 <- mutate(data_t1and2_long,
+bezi_data_m1 <- mutate(data_long_m1,
                     p_all = ifelse(AllArea_GasPortion >= 1, .99999, AllArea_GasPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_data <- mutate(data_long,
+bezi_data_m1_full <- mutate(data_long_m1_full,
                     p_all = ifelse(AllArea_GasPortion >= 1, .99999, AllArea_GasPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_datat1t2_OK <- mutate(data_t1and2_long_OK,
+bezi_data_m2_noOK <- mutate(data_long_m2_noOK,
                     p_all = ifelse(AllArea_GasPortion >= 1, .99999, AllArea_GasPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_datat1t2_nonOK <- mutate(data_t1and2_long_nonOK,
+bezi_data_m3_OK <- mutate(data_long_m3_OK,
                     p_all = ifelse(AllArea_GasPortion >= 1, .99999, AllArea_GasPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_modelt1t2 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2, trace = F)
-bezi_model <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data, trace = F)
-bezi_modelt1t2_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2_OK, trace = F)
-bezi_modelt1t2_nonOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2_nonOK, trace = F)
+bezi_model1 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1, trace = F)
+bezi_model1_full <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1_full, trace = F)
+bezi_model2_noOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m2_noOK, trace = F)
+bezi_model3_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m3_OK, trace = F)
 
-texreg::screenreg(list(bezi_modelt1t2,bezi_model,bezi_modelt1t2_OK,bezi_modelt1t2_nonOK),
-       # custom.coef.map = list('mu (Intercept)' = 'Historical (Intercept)',
-       #                        'mu timetime 2' = 'Present-day Change',
-       #                        '(Intercept)' = 'Historical (Intercept)',
-       #                        'timetime 2' = 'Present-day Change'
-       #                        ),
-       custom.model.names = c("BEZI","Full BEZI","BEZI - OK", "BEZI - nonOK"),
+texreg::screenreg(list(bezi_model1,bezi_model1_full,bezi_model2_noOK,bezi_model3_OK),
+       omit.coef = c("nu|sigma"),
+       caption = "Dependent Variable: Portion Land Used in Gas Production",
+       caption.above = T,
+       label = "tab:portion_gas",
+       custom.coef.names = c('mu (Intercept)' = 'Historical (Intercept)',
+                              'mu timetime 2' = 'Present-day Change'),
+       custom.model.names = c("BEZI","BEZI | All Tribes","BEZI | Excluding OK", "BEZI | Only OK"),
        digits = 3,
-       ci.force = T
+       # stars = c(0.001, 0.01, 0.05, 0.1),
+       # symbol = c('$^{***}$','$^{**}$','$^{*}$','.'),
+       ci.force = T,
+       table = FALSE, use.packages = FALSE
        )
 
 ```
-
-\begin{sidewaystable}[!htbp] \centering 
-  \caption{Prevalence of Gas Production} 
-  \label{tab:pub_lands} 
+\begin{sidewaystable}[!htbp] \centering
+  \caption{Prevalence of Gas Production}
+  \label{tab:og_gas}
 \begin{tabular}{l c c c c }
-\\[-1.8ex]\hline 
-\hline \\[-1.8ex] 
- & \multicolumn{4}{c}{Dependent Variable: Portion Land Used in Gas Production} \\ 
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+ & \multicolumn{4}{c}{Dependent Variable: Portion Land Used in Gas Production} \\
 \hline
- & BEZI & Full BEZI & OLS & Full OLS \\
+ & BEZI & BEZI | All Tribes & BEZI | Excluding OK & BEZI | Only OK \\
 \hline
-Historical (Intercept)    & $-1.661^{***}$ &   $-1.747^{***}$        & $0.062^{***}$   &   $0.069^{***}$               \\
-                     & $(-1.711;\ -1.611)$ &   $(-1.792;\ -1.702)$ &   $(0.049;\ 0.075)$    &   $(0.053;\ 0.085)$          \\
-Present-day Change     & $0.235^{***}$     &   $0.276^{***}$         & $-0.031^{***}$   &   $-0.040^{***}$              \\
-                     & $(0.246;  0.820)$   &   $(0.454;  0.969)$   &   $(-0.047;\ -0.015)$   & $(-0.047;\ -0.015)$            \\
+Historical (Intercept)    & $-1.661^{***}$ &   $-1.746^{***}$        & $-1.797^{***}$   &   $-1.559^{***}$               \\
+                     & $(-1.710;\ -1.611)$ &   $(-1.791;\ -1.702)$ &   $(-1.862;\ -1.732)$    &   $(-1.617;\ -1.501)$          \\
+Present-day Change     & $0.606^{***} $     &   $0.775^{***}$         & $0.253$   &   $0.989^{***} $              \\
+                     & $(0.302;\  0.910)$   &   $(0.501;\  1.049)$   &   $(-0.184;\  0.690)$   & $(0.573;\  1.405)$            \\
 
 \hline \\[-1.8ex]
-Obs.           & 7545                & 9845              &  7545   &    9845               \\
+Obs.           & 7516                & 9796              &  5538   &    3733               \\
 
-\hline 
-\hline \\[-1.8ex] 
+\hline
+\hline \\[-1.8ex]
 \multicolumn{5}{l}{{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01}}
 \end{tabular}
 
 
-\end{sidewaystable} 
-
+\end{sidewaystable}
 
 ## Federal Lands
 
 Finally, we study the difference between proximity to federal lands during the historical and present-day periods.  We estimate two types of models on the two datasets.  The first model is a Zero-Inflated Beta model designed to analyze data bounded by 0 and 1. The zero-inflated version of the model accounts for the over abundance of zeros (Table \ref{tab:sum_both}).  The results suggest that present-day lands are closer to federal lands compared to historical lands.  The BEZI and Full BEZI coefficient estimates on Present-day Change is 0.51 and 0.52, which implies that the odds of being in proximity to federal lands in the present-day period are 1.65 higher than in the historial period.  The OLS estimates suggest that the present-day CCEs are about 11% more likely to be near federal lands.  
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE}
+```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
 
-bezi_datat1t2 <- mutate(data_t1and2_long,
+bezi_data_m1 <- mutate(data_long_m1,
                     p_all = ifelse(PADPortion >= 1, .99999, PADPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_data <- mutate(data_long,
+bezi_data_m1_full <- mutate(data_long_m1_full,
                     p_all = ifelse(PADPortion >= 1, .99999, PADPortion)) %>%
   filter(!is.na(p_all)) %>%
   dplyr::select(time, tribe, p_all,wgt)
 
-bezi_modelt1t2 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_datat1t2, trace = F)
-bezi_model <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data, trace = F)
-ols_clustered_model_t1t2 <- ols_clustered(dep.var="PADPortion",df=data_t1and2_long,clust.var = "tribe")
-ols_clustered_model <- ols_clustered(dep.var="PADPortion",df=data_long,clust.var = "tribe")
+bezi_data_m2_noOK <- mutate(data_long_m2_noOK,
+                    p_all = ifelse(PADPortion >= 1, .99999, PADPortion)) %>%
+  filter(!is.na(p_all)) %>%
+  dplyr::select(time, tribe, p_all,wgt)
 
-texreg::screenreg(list(bezi_modelt1t2,ols_clustered_model$results,bezi_model,ols_clustered_model_t1t2$results),
-       # custom.coef.map = list('mu (Intercept)' = 'Historical (Intercept)',
-       #                        'mu timetime 2' = 'Present-day Change',
-       #                        '(Intercept)' = 'Historical (Intercept)',
-       #                        'timetime 2' = 'Present-day Change'
-       #                        ),
-       custom.model.names = c("BEZI","OLS","Full BEZI","Full OLS"),
+bezi_data_m3_OK <- mutate(data_long_m3_OK,
+                    p_all = ifelse(PADPortion >= 1, .99999, PADPortion)) %>%
+  filter(!is.na(p_all)) %>%
+  dplyr::select(time, tribe, p_all,wgt)
+
+bezi_model1 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1, trace = F)
+bezi_model1_full <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1_full, trace = F)
+bezi_model2_noOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m2_noOK, trace = F)
+bezi_model3_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m3_OK, trace = F)
+
+texreg::screenreg(list(bezi_model1,bezi_model1_full,bezi_model2_noOK,bezi_model3_OK),
+       omit.coef = c("nu|sigma"),
+       caption = "Dependent Variable: Proximity to Federal Lands",
+       caption.above = T,
+       label = "tab:pad",
+       custom.coef.names = c('mu (Intercept)' = 'Historical (Intercept)',
+                              'mu timetime 2' = 'Present-day Change'),
+       custom.model.names = c("BEZI","BEZI | All Tribes","BEZI | Excluding OK", "BEZI | Only OK"),
        digits = 3,
-       ci.force = T
+       # stars = c(0.001, 0.01, 0.05, 0.1),
+       # symbol = c('$^{***}$','$^{**}$','$^{*}$','.'),
+       ci.force = T,
+       table = FALSE, use.packages = FALSE
        )
 
 ```
-
-\begin{sidewaystable}[!htbp] \centering 
-  \caption{Proximity to Federal Lands} 
-  \label{tab:pub_lands} 
+\begin{sidewaystable}[!htbp] \centering
+  \caption{Proximity to Federal Lands}
+  \label{tab:pad}
 \begin{tabular}{l c c c c }
-\\[-1.8ex]\hline 
-\hline \\[-1.8ex] 
- & \multicolumn{4}{c}{Dependent Variable: Proximity to Federal Lands} \\ 
+\\[-1.8ex]\hline
+\hline \\[-1.8ex]
+ & \multicolumn{4}{c}{Dependent Variable: Proximity to Federal Lands} \\
 \hline
- & BEZI & Full BEZI & OLS & Full OLS \\
+ & BEZI & BEZI | All Tribes & BEZI | Excluding OK & BEZI | Only OK \\
 \hline
-Historical (Intercept)    & $-4.693^{***}$ &   $-4.707^{***}$        & $0.007^{***}$   &   $0.075^{***}$               \\
-                     & $(-4.732;\ -4.653)$ &   $(-4.741;\ -4.673)$ &   $(0.006;\ 0.008)$    &   $(0.006;\ 0.008)$          \\
-Present-day Change     & $0.610^{***}$     &   $0.592^{***}$         & $0.017^{***}$   &   $0.018^{***}$              \\
-                     & $(0.508;\  0.712)$   &   $(0.501;\  0.683)$   &   $(0.010;\ 0.023)$   & $(0.010;\ 0.026)$            \\
+Historical (Intercept)    & $-4.693^{***}$ &   $-4.708^{***}$        & $-4.610^{***}$   &   $-4.876^{***}$               \\
+                     & $(-4.733;\ -4.654)$ &   $(-4.742;\ -4.674)$ &   $(-4.655;\ -4.565)$    &   $(-4.937;\ -4.815)$          \\
+Present-day Change     & $0.626^{***} $     &   $0.622^{***}$         & $0.701^{***}$   &   $-0.036$              \\
+                     & $(0.521;\  0.731)$   &   $(0.528;\  0.716)$   &   $(0.591;\  0.811)$   & $(-0.374;\  0.302)$            \\
 
 \hline \\[-1.8ex]
-Obs.           & 7545                & 8945              &  7545   &    8945               \\
+Obs.           & 7516                & 9796              &  5538   &    3733               \\
 
-\hline 
-\hline \\[-1.8ex] 
+\hline
+\hline \\[-1.8ex]
 \multicolumn{5}{l}{{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01}}
 \end{tabular}
 
 
-\end{sidewaystable} 
+\end{sidewaystable}
+
 
 
 

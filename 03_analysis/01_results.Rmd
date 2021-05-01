@@ -11,6 +11,7 @@ output: bookdown::pdf_document2
 
 knitr::opts_chunk$set(echo = TRUE)
 options(scipen=999)
+options(tinytex.verbose = TRUE)
 
 ```
 
@@ -93,17 +94,53 @@ data_long_m1 <- data_t1and2_long_0 %>%
   ungroup() %>%
   left_join(data_t1and2_long_0,
             .,
-            by=c("tribe","time"))
+            by=c("tribe","time")) 
   
+write_rds(data_long_m1,"data_long.rds")
+write_rds(data_long_m1_full,"data_long_all.rds")
+
 svy_data_t1and2_long <- data_long_m1 %>% 
   as_survey_design(ids = tribe,weights = wgt)
 
 data_long_m2_noOK <- df_subset(c("air_federal","air_state"))
 data_long_m3_OK <- df_subset(c("otsa"))
 
-# 
-# source("make_drought_fig.R")
+dat_env <- data_long_m1 %>% 
+  select(tribe, GEOID, time,
+         `Days over 100F`=heatdays_mean,
+         `Drought`=drought_mean,
+         `Precipitation`=precip,
+         `Wildfire Hazard Potential`=whp,
+         `Elevation`=elevation_mean,
+         `Ruggedness`=tri_mean,
+         `Soil Organic Carbon`=SOC_perc,
+         `Oil and Gas Basin`=BasinPortion,
+         `Oil and Gas Basin | Binary`=BasinBinary,
+         `Oil Production`=AllArea_OilPortion,
+         `Gas Production`=AllArea_GasPortion,
+         `Fraction Federal Land`=PADPortion) 
 
+dat_env_all <- data_long_m1_full %>% 
+  select(tribe, GEOID, time,
+          `Days over 100F`=heatdays_mean,
+         `Drought`=drought_mean,
+         `Precipitation`=precip,
+         `Wildfire Hazard Potential`=whp,
+         `Elevation`=elevation_mean,
+         `Ruggedness`=tri_mean,
+         `Soil Organic Carbon`=SOC_perc,
+         `Oil and Gas Basin`=BasinPortion,
+         `Oil and Gas Basin | Binary`=BasinBinary,
+         `Oil Production`=AllArea_OilPortion,
+         `Gas Production`=AllArea_GasPortion,
+         `Fraction Federal Land`=PADPortion) 
+
+# subset to T1 and T2
+dat_env_all_t1 <- filter(dat_env_all, time == "time 1")
+dat_env_all_t2 <- filter(dat_env_all, time == "time 2")
+
+dat_env_t1 <- filter(dat_env, time == "time 1")
+dat_env_t2 <- filter(dat_env, time == "time 2")
 ```
 
 \newpage
@@ -178,7 +215,8 @@ for_summary[[1]] <- data_long_m1 %>%
          `Elevation`=elevation_mean,
          `Ruggedness`=tri_mean,
          `Soil Organic Carbon`=SOC_perc,
-         `Oil and Gas Basin`=BasinPortion,
+         `Oil and Gas Basin | Portion`=BasinPortion,
+         `Oil and Gas Basin | Binary`=BasinBinary,
          `Oil Production`=AllArea_OilPortion,
          `Gas Production`=AllArea_GasPortion,
          `Fraction Federal Land`=PADPortion) %>%
@@ -192,7 +230,8 @@ for_summary[[2]] <- data_long_m1_full %>%
          `Elevation`=elevation_mean,
          `Ruggedness`=tri_mean,
          `Soil Organic Carbon`=SOC_perc,
-         `Oil and Gas Basin`=BasinPortion,
+         `Oil and Gas Basin | Portion`=BasinPortion,
+         `Oil and Gas Basin | Binary`=BasinBinary,
          `Oil Production`=AllArea_OilPortion,
          `Gas Production`=AllArea_GasPortion,
          `Fraction Federal Land`=PADPortion) %>%
@@ -237,14 +276,118 @@ We assess the robustness of our estimate using several alternative model specifi
 - BEZI: zero-inflated Beta regression when the dependent variable is bounded between zero and one (e.g., percent) using only data on tribes with records in the historical and present-day periods..
 
 
-# Results
+# KS Test Results
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+# Precipitation
+ks_precip <- ks.test(dat_env_all_t1$Precipitation, dat_env_all_t2$Precipitation)
+ks_precip2 <- ks.test(dat_env_t1$Precipitation, dat_env_t2$Precipitation)
+
+# Presence of oil/gas basin (binary)
+ks_og_basin <- ks.test(dat_env_all_t1$"Oil and Gas Basin", dat_env_all_t2$"Oil and Gas Basin")
+ks_og_basin2 <- ks.test(dat_env_t1$"Oil and Gas Basin", dat_env_t2$"Oil and Gas Basin")
+ks_og_basinbinary <- ks.test(dat_env_all_t1$"Oil and Gas Basin | Binary", dat_env_all_t2$"Oil and Gas Basin | Binary")
+ks_og_basinbinary2 <- ks.test(dat_env_t1$"Oil and Gas Basin | Binary", dat_env_t2$"Oil and Gas Basin | Binary")
+
+# Oil Production
+ks_oil <- ks.test(dat_env_all_t1$"Oil Production", dat_env_all_t2$"Oil Production")
+ks_oil2 <- ks.test(dat_env_t1$"Oil Production", dat_env_t2$"Oil Production")
+
+# Gas production
+ks_gas <- ks.test(dat_env_all_t1$"Gas Production", dat_env_all_t2$"Gas Production")
+ks_gas2 <- ks.test(dat_env_t1$"Gas Production", dat_env_t2$"Gas Production")
+
+# Heat
+ks_heat <- ks.test(dat_env_all_t1$"Days over 100F", dat_env_all_t2$"Days over 100F")
+ks_heat2 <- ks.test(dat_env_t1$"Days over 100F", dat_env_t2$"Days over 100F")
+
+# Drought
+ks_drought <- ks.test(dat_env_all_t1$Drought, dat_env_all_t2$Drought)
+ks_drought2 <- ks.test(dat_env_t1$Drought, dat_env_t2$Drought)
+
+# Wildfire risk
+ks_fire <- ks.test(dat_env_all_t1$"Wildfire Hazard Potential", dat_env_all_t2$"Wildfire Hazard Potential")
+ks_fire2 <- ks.test(dat_env_t1$"Wildfire Hazard Potential", dat_env_t2$"Wildfire Hazard Potential")
+
+# Elevation
+ks_elevation <- ks.test(dat_env_all_t1$Elevation, dat_env_all_t2$Elevation)
+ks_elevation2 <- ks.test(dat_env_t1$Elevation, dat_env_t2$Elevation)
+
+# TRI (ruggedness)
+ks_tri <- ks.test(dat_env_all_t1$Ruggedness, dat_env_all_t2$Ruggedness)
+ks_tri2 <- ks.test(dat_env_t1$Ruggedness, dat_env_t2$Ruggedness)
+
+# Fraction federal lands
+ks_fed <- ks.test(dat_env_all_t1$"Fraction Federal Land", dat_env_all_t2$"Fraction Federal Land")
+ks_fed2 <- ks.test(dat_env_t1$"Fraction Federal Land", dat_env_t2$"Fraction Federal Land")
+
+# SOC
+ks_soc <- ks.test(dat_env_all_t1$"Soil Organic Carbon", dat_env_all_t2$"Soil Organic Carbon")
+ks_soc2 <- ks.test(dat_env_t1$"Soil Organic Carbon", dat_env_t2$"Soil Organic Carbon")
+
+
+# Combine all tests into table
+ks_results <- tibble(
+  Variable = c("Days over 100F",
+               "Drought",
+               "Precipitation", 
+               "Wildfire Hazard Potential",
+               "Elevation",
+               "Ruggedness",
+               "Soil Organic Carbon",
+               "Oil and Gas Basin | Portion",
+               "Oil and Gas Basin | Binary",
+               "Oil Production",
+               "Gas Production",
+               "Fraction Federal Lands"),
+  D_sub = c(paste(round(ks_heat2$statistic, digits = 3), "***"),
+            paste(round(ks_drought2$statistic, digits = 3), "***"),
+            paste(formatC(ks_precip2$statistic, format='f', digits = 3), "***"),
+            paste(round(ks_fire2$statistic, digits = 3), "***"),
+            paste(round(ks_elevation2$statistic, digits = 3), "***"),
+            paste(round(ks_tri2$statistic, digits = 3), "***"),
+            paste(round(ks_soc2$statistic, digits = 3), "***"),
+            paste(round(ks_og_basin2$statistic, digits = 3), "***"),
+            paste(round(ks_og_basinbinary2$statistic, digits = 3), "***"),
+            paste(round(ks_oil2$statistic, digits = 3), "***"),
+            paste(round(ks_gas2$statistic, digits = 3), "***"),
+            paste(round(ks_fed2$statistic, digits = 3), "***")),
+  D_all = c(paste(round(ks_heat$statistic, digits = 3), "***"),
+            paste(round(ks_drought$statistic, digits = 3), "***"),
+            paste(formatC(ks_precip$statistic, format='f', digits = 3), "***"),
+            paste(round(ks_fire$statistic, digits = 3), "***"),
+            paste(round(ks_elevation$statistic, digits = 3), "***"),
+            paste(round(ks_tri$statistic, digits = 3), "***"),
+            paste(round(ks_soc$statistic, digits = 3), "***"),
+            paste(round(ks_og_basin$statistic, digits = 3), "***"),
+            paste(round(ks_og_basinbinary$statistic, digits = 3), "***"),
+            paste(round(ks_oil$statistic, digits = 3), "***"),
+            paste(round(ks_gas$statistic, digits = 3), "***"),
+            paste(round(ks_fed$statistic, digits = 3), "***")))
+
+# kable table of KS tests
+kable_ks_tests <- kable(ks_results, format = "latex", booktabs = TRUE, digits = 3, align="c", linesep = "",
+                        caption = "Kolmogorov-Smirnov Tests",
+                        col.names = c("Variable", "D Statistic", "D-Statistic")) %>%
+  kableExtra::kable_styling(font_size = 9.5) %>%
+  kableExtra::add_header_above(header = c(" "=1,"Tribes with \nT1 and T2 Landholdings"=1,  "All Tribes"=1),
+                   align = "c",
+                   bold = TRUE) %>%
+  kableExtra::footnote(general = c("*p < 0.1; **p < 0.05; ***p < 0.01")) %>%
+  kableExtra::column_spec(2:3, width = "1.5in") 
+
+print(kable_ks_tests)
+```
+
+
+# Regression Results
 
 This section presents the results of the analysis along with several robustness checks.  Throughout the text 95% confidence intervals are presented as [lower,upper]. 
 
 
 ## Heat
 
-The results in Table \ref{tab:heat} suggest that the present-day lands experience 2-3 more days in excess of 100 degrees per year compared to historical lands. All point estimates yield significant increases, ranging from 2.54 [1.6, 3.48] from the Weighted OLS model to 2.92 [1.00, 4.83] from the Full OLS model.  The coefficients of the Poisson model are not directly comparable to the OLS estimates.  The model suggests that historical lands experience about 5.5 (5.5=exp(1.705)) days a year over 100 degrees, while the present-days lands experience 2.6 (2.6=exp(1.71)*(exp(.39)-1)) , additional days over 100, which is comparable to the OLS estimates. 
+The results in Table suggest that the present-day lands experience 2-3 more days in excess of 100 degrees per year compared to historical lands. All point estimates yield significant increases, ranging from 2.54 [1.6, 3.48] from the Weighted OLS model to 2.92 [1.00, 4.83] from the Full OLS model.  The coefficients of the Poisson model are not directly comparable to the OLS estimates.  The model suggests that historical lands experience about 5.5 (5.5=exp(1.705)) days a year over 100 degrees, while the present-days lands experience 2.6 (2.6=exp(1.71)*(exp(.39)-1)) , additional days over 100, which is comparable to the OLS estimates. 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
@@ -266,7 +409,7 @@ sg_table(model.shell,
 
 ## Drought
 
-Table \ref{tab:drought} present the results of the analysis of differences in drought across the historical and present-day lands.  Our variable is the change in drought over time.  The coefficients on historical indicate that even the historical lands are experiencing more drought.  The coefficients on present-day change indicate that present day lands are becoming even drier.  OLS, Weighted OLS, Full OLS, and Tribe Fixed Effects models all indicate that present-day lands are about twice as dry as historical lands, with point estimates ranging between -0.06 (Weighted OLS) and -0.18 (OLS).  
+Table present the results of the analysis of differences in drought across the historical and present-day lands.  Our variable is the change in drought over time.  The coefficients on historical indicate that even the historical lands are experiencing more drought.  The coefficients on present-day change indicate that present day lands are becoming even drier.  OLS, Weighted OLS, Full OLS, and Tribe Fixed Effects models all indicate that present-day lands are about twice as dry as historical lands, with point estimates ranging between -0.06 (Weighted OLS) and -0.18 (OLS).  
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
@@ -288,7 +431,7 @@ sg_table(model.shell,
 
 ## Precipitation
 
-Table \ref{tab:precip} present the results of the analysis of precipitation across the historical and present-day lands.   The coefficients on Historical across models range from 899 mm to 994 mm of precipitation each year on historical lands. While the estimates in the unweighted models are statistically insignificant, the weighted models suggest an increase in precipitation of around 58 mm per year (Weighted OLS) or 135 mm per year (Full Weighted OLS).  These results suggest that on average tribes are now in areas with higher precipitation but that larger tribes were relocated to areas with more variable precipitation patterns (insignificant estimates). 
+Table present the results of the analysis of precipitation across the historical and present-day lands.   The coefficients on Historical across models range from 899 mm to 994 mm of precipitation each year on historical lands. While the estimates in the unweighted models are statistically insignificant, the weighted models suggest an increase in precipitation of around 58 mm per year (Weighted OLS) or 135 mm per year (Full Weighted OLS).  These results suggest that on average tribes are now in areas with higher precipitation but that larger tribes were relocated to areas with more variable precipitation patterns (insignificant estimates). 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
@@ -310,7 +453,7 @@ sg_table(model.shell,
 
 ## Wildfire Hazard Potential
 
-The results in table \ref{tab:whp} suggest that present-day lands have higher wildfire hazard potential (WHP) compared to historical lands.  The coefficients on Historical indicate that the historical lands have an average WHP rating of around 1 on a scale of 1 (very low fire hazard potential) to 5 (very high hazard potential). The results indicate that the present-day lands have a higher WHP than the historical lands by 0.55 points on the index, a 47% increase.  This estimate is robust to several alternative specifications, including the Full OLS and Tribe Fixed Effects models. The Full Weighted OLS model is the only specification which estimates a reduction in WHP in the present day. This suggests that tribes with a broader historical spread across many CCE's experienced greater increases in WHP, while tribes with less historical spread across CCE's did not. While wildfire hazard potential is a function of the natural environment, it is also influenced by human modifications of the natural and built environment.  
+The results in table suggest that present-day lands have higher wildfire hazard potential (WHP) compared to historical lands.  The coefficients on Historical indicate that the historical lands have an average WHP rating of around 1 on a scale of 1 (very low fire hazard potential) to 5 (very high hazard potential). The results indicate that the present-day lands have a higher WHP than the historical lands by 0.55 points on the index, a 47% increase.  This estimate is robust to several alternative specifications, including the Full OLS and Tribe Fixed Effects models. The Full Weighted OLS model is the only specification which estimates a reduction in WHP in the present day. This suggests that tribes with a broader historical spread across many CCE's experienced greater increases in WHP, while tribes with less historical spread across CCE's did not. While wildfire hazard potential is a function of the natural environment, it is also influenced by human modifications of the natural and built environment.  
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
@@ -332,7 +475,7 @@ sg_table(model.shell,
 
 ## Elevation
 
-The results in table \ref{tab:elevation} suggest that the elevation of present-day lands is greater than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE elevation of 541.46 meters. The results indicate that the present-day lands are an average of 196.43 meters higher than the historical lands, a 36% increase.  While we find similar results with the Full OLS model, the weighted models and Tribe FE model indicate no or a small decrease in elevation. These  results suggests that tribes with a broader historical spread across many CCE's experienced a small decrease in elevation.  The weighted versions of the model compare across tribes rather than the population and extent of the peoples in the tribe.
+The results in table suggest that the elevation of present-day lands is greater than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE elevation of 541.46 meters. The results indicate that the present-day lands are an average of 196.43 meters higher than the historical lands, a 36% increase.  While we find similar results with the Full OLS model, the weighted models and Tribe FE model indicate no or a small decrease in elevation. These  results suggests that tribes with a broader historical spread across many CCE's experienced a small decrease in elevation.  The weighted versions of the model compare across tribes rather than the population and extent of the peoples in the tribe.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
@@ -354,7 +497,7 @@ sg_table(model.shell,
 
 ## Ruggedness
 
-The results in table \ref{tab:tri} suggest that present-day lands are more rugged than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE ruggedness index of 5.36. The results indicate that the present-day lands have an average ruggedness index 3.14 points higher than the historical lands, a 59% increase.  While we find similar results with the Full OLS model, the weighted models and Tribe FE model indicate no difference between historical and present-day ruggedness. 
+The results in table suggest that present-day lands are more rugged than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE ruggedness index of 5.36. The results indicate that the present-day lands have an average ruggedness index 3.14 points higher than the historical lands, a 59% increase.  While we find similar results with the Full OLS model, the weighted models and Tribe FE model indicate no difference between historical and present-day ruggedness. 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
@@ -376,7 +519,7 @@ sg_table(model.shell,
 
 ## Soil Organic Carbon
 
-The results in Table \ref{tab:soc} provide mixed evidence that the percent organic carbon is greater in present-day lands compared to historical lands. Our primary OLS model indicates that present-day lands have 8.25 percentage points higher SOC content than historical lands. While the Full OLS model yields similar results in direction and magnitude, both Weighted OLS and Tribe FE models suggest that the magnitude of increase was relatively small and insignificant. The Full Weighted OLS model suggests that SOC levels are lower in the present day. We do not report these results in the manuscript because the measure of organic carbon is not durable over time (see notes in Data Description).
+The results in Table provide mixed evidence that the percent organic carbon is greater in present-day lands compared to historical lands. Our primary OLS model indicates that present-day lands have 8.25 percentage points higher SOC content than historical lands. While the Full OLS model yields similar results in direction and magnitude, both Weighted OLS and Tribe FE models suggest that the magnitude of increase was relatively small and insignificant. The Full Weighted OLS model suggests that SOC levels are lower in the present day. We do not report these results in the manuscript because the measure of organic carbon is not durable over time (see notes in Data Description).
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",5)
@@ -398,7 +541,7 @@ sg_table(model.shell,
 
 ## Oil and Gas Basins
 
-We evaluate access to oil and gas based on the likelihood that a tribe's CCEs lie over subsurface oil and gas.  Our main specification, OLS, in Table \ref{tab:og_access} (column 1) indicates that present-day lands are 11% [0.20, 0.01] less likely to have access to subsurface oil and gas than the baseline historical lands (60% [0.53, 0.66]). Estimating OLS with a binary dependent variable is known as a linear probability model (LPM).  The LPM has two well-known shortcomings: 1) bias when the mass of the distribution lies outside of the unit interval, and 2) heteroskedasticity.  Since we estimate all models with robust standard errors, we correct for heteroskedasticity.  We estimate a logistic regression (column 5) to assess the robustness of the difference between present-day and historical lands.  The results of the logistic regression indicate that present-day lands have less access to oil and gas supporting the results of our main specification.  
+We evaluate access to oil and gas based on the likelihood that a tribe's CCEs lie over subsurface oil and gas.  Our main specification, OLS, in Table (column 1) indicates that present-day lands are 11% [0.20, 0.01] less likely to have access to subsurface oil and gas than the baseline historical lands (60% [0.53, 0.66]). Estimating OLS with a binary dependent variable is known as a linear probability model (LPM).  The LPM has two well-known shortcomings: 1) bias when the mass of the distribution lies outside of the unit interval, and 2) heteroskedasticity.  Since we estimate all models with robust standard errors, we correct for heteroskedasticity.  We estimate a logistic regression (column 5) to assess the robustness of the difference between present-day and historical lands.  The results of the logistic regression indicate that present-day lands have less access to oil and gas supporting the results of our main specification.  
 
 Weighted OLS and Full Weighted OLS models show a significant increase in the likelihood for present-day lands to have access to oil and gas reserves. In contrast, the unweighted model results suggests that tribes with larger historical lands experienced reductions in oil and gas access. This result, again, highlights the variation across tribes in the dataset.
 
@@ -428,15 +571,15 @@ bezi_model1 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1
 bezi_model1_full <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1_full, trace = F)
 bezi_model2_noOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m2_noOK, trace = F)
 bezi_model3_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m3_OK, trace = F)
-
+  
 texreg::screenreg(list(bezi_model1,bezi_model1_full,bezi_model2_noOK,bezi_model3_OK),
        omit.coef = c("nu|sigma"),
        caption = "Dependent Variable: Portion Land With Subsurface Oil and Gas",
        caption.above = T,
        label = "tab:og_basins",
-       custom.coef.names = c('mu (Intercept)' = 'Historical (Intercept)',
-                              'mu timetime 2' = 'Present-day Change'),
-       custom.model.names = c("BEZI","BEZI | All Tribes","BEZI | Excluding OK", "BEZI | Only OK"),
+       # custom.coef.names = c('mu (Intercept)' = 'Historical (Intercept)',
+       #                        'mu timetime 2' = 'Present-day Change'),
+       # custom.model.names = c("BEZI","BEZI | All Tribes","BEZI | Excluding OK", "BEZI | Only OK", "Logit"),
        digits = 3,
        # stars = c(0.001, 0.01, 0.05, 0.1),
        # symbol = c('$^{***}$','$^{**}$','$^{*}$','.'),
@@ -451,15 +594,15 @@ texreg::screenreg(list(bezi_model1,bezi_model1_full,bezi_model2_noOK,bezi_model3
   \label{tab:og_basins}
 \begin{tabular}{l c c c c }
 \\[-1.8ex]\hline
-\cline{2-6} \\[-1.8ex]
+\\[-1.8ex]
  & \multicolumn{4}{c}{Dependent Variable: Portion Land With Subsurface Oil and Gas} \\
-\hline
+\hline [1ex]
  & BEZI & BEZI | All Tribes & BEZI | Excluding OK & BEZI | Only OK \\
 \hline
 Historical (Intercept)    & $1.195^{***}$ &   $1.155 ^{***}$        & $1.150 ^{***}$   &   $1.297 ^{***}$               \\
-                     & $(1.146;\ 1.244)$ &   $(1.111;\ 1.198)$ &   $(1.090;\ 1.210)$    &   $(1.235;\ 1.360)$          \\ \
+                     & $(1.146;\ 1.244)$ &   $(1.111;\ 1.198)$ &   $(1.090;\ 1.210)$    &   $(1.235;\ 1.360)$          \\ \ [1ex]
 Present-day Change     & $0.240.$     &   $0.326^{**}$         & $0.363 ^{*}$   &   $0.028$              \\
-                     & $(-0.016;\ 0.497)$   &   $(0.094;\ 0.557)$   &   $(0.038;\ 0.687)$   & $(-0.387;\ 0.442)$            \\
+                     & $(-0.016;\ 0.497)$   &   $(0.094;\ 0.557)$   &   $(0.038;\ 0.687)$   & $(-0.387;\ 0.442)$            \\ [1ex]
 
 \hline \\[-1.8ex]
 Obs.           & 7516                & 9796              &  5538   &    3733               \\
@@ -473,9 +616,27 @@ Obs.           & 7516                & 9796              &  5538   &    3733    
 \end{sidewaystable}
 
 
+```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
+model.shell <- vector("list",4)
+dep.var <- "BasinBinary"
+
+model.shell[[1]] <- glm_clustered(dep.var, family = "binomial", df = data_long_m1)
+model.shell[[2]] <- glm_clustered(dep.var, family = "binomial", df = data_long_m1_full)
+model.shell[[3]] <- glm_clustered(dep.var, family = "binomial", df = data_long_m2_noOK)
+model.shell[[4]] <- glm_clustered(dep.var, family = "binomial", df = data_long_m3_OK)
+
+sg_table(model.shell,
+         dep.name = "Dummy for Land With Subsurface Oil and Gas",
+         label = "tab:soc",
+         column.labels = c("Logit","Logit | All Tribes","Logit | Excluding OK","Logit | Only OK"),
+         title = "Tribes with Land With Subsurface Oil and Gas")
+
+```
+
+
 ## Oil Production
 
-We compare annual oil production (measured in thousands of barrels) between historical and present-day lands, with model specifications providing some evidence that there is less oil production on present-day CCEs (Table \ref{tab:oil_avg}). While our primary OLS specification shows a statistically insignificant reduction in oil production (123 thousand barrels), additional model specifications show significant reductions.  When the full dataset is included, the average oil production of present-day CCEs falls by 334 thousand barrels per year, a 50% reduction from the average across the historical CCEs (783 thousand barrels).
+We compare annual oil production (measured in thousands of barrels) between historical and present-day lands, with model specifications providing some evidence that there is less oil production on present-day CCEs . While our primary OLS specification shows a statistically insignificant reduction in oil production (123 thousand barrels), additional model specifications show significant reductions.  When the full dataset is included, the average oil production of present-day CCEs falls by 334 thousand barrels per year, a 50% reduction from the average across the historical CCEs (783 thousand barrels).
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
 
@@ -549,7 +710,7 @@ Obs.           & 7516                & 9796              &  5538   &    3733    
 
 ## Gas Production
 
-Drawing on the U.S. Department of Agriculture's natural gas production data (measured in billion cubic feet), we compare gas production between historical and present-day lands.  Our estimates indicate that gas production increased by 4.29 billion cubic feet per year in present-day CCEs up from 6.1 billion cubic feet on the historical CCEs (Table \ref{tab:gas_avg}).  However, these results do not seem to be robust across specifications.  Additional model specification yield mixed results. The Weighted, Full Weighted OLS, and Tribe Fixed Effects models show insignificant changes in gas production between time periods. 
+Drawing on the U.S. Department of Agriculture's natural gas production data (measured in billion cubic feet), we compare gas production between historical and present-day lands.  Our estimates indicate that gas production increased by 4.29 billion cubic feet per year in present-day CCEs up from 6.1 billion cubic feet on the historical CCEs.  However, these results do not seem to be robust across specifications.  Additional model specification yield mixed results. The Weighted, Full Weighted OLS, and Tribe Fixed Effects models show insignificant changes in gas production between time periods. 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
 
@@ -622,7 +783,7 @@ Obs.           & 7516                & 9796              &  5538   &    3733    
 
 ## Federal Lands
 
-Finally, we study the difference between proximity to federal lands during the historical and present-day periods.  We estimate two types of models on the two datasets.  The first model is a Zero-Inflated Beta model designed to analyze data bounded by 0 and 1. The zero-inflated version of the model accounts for the over abundance of zeros (Table \ref{tab:sum_both}).  The results suggest that present-day lands are closer to federal lands compared to historical lands.  The BEZI and Full BEZI coefficient estimates on Present-day Change is 0.51 and 0.52, which implies that the odds of being in proximity to federal lands in the present-day period are 1.65 higher than in the historial period.  The OLS estimates suggest that the present-day CCEs are about 11% more likely to be near federal lands.  
+Finally, we study the difference between proximity to federal lands during the historical and present-day periods.  We estimate two types of models on the two datasets.  The first model is a Zero-Inflated Beta model designed to analyze data bounded by 0 and 1. The zero-inflated version of the model accounts for the over abundance of zeros.  The results suggest that present-day lands are closer to federal lands compared to historical lands.  The BEZI and Full BEZI coefficient estimates on Present-day Change is 0.51 and 0.52, which implies that the odds of being in proximity to federal lands in the present-day period are 1.65 higher than in the historial period.  The OLS estimates suggest that the present-day CCEs are about 11% more likely to be near federal lands.  
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
 

@@ -64,8 +64,7 @@ df1 <- read_csv("../01_data/clean/00_all_countypolygons.csv") %>%
 df2 <- read_csv("../01_data/clean/00_all_newpolygons.csv") %>% 
   inner_join(.,t2,by="UID") %>% 
   select(tribe, everything()) %>% 
-  mutate(time = "time 2",
-         SOC_perc = SOC_mean/10) 
+  mutate(time = "time 2") 
 
 data_long_0 <- bind_rows(df1,df2) %>% 
   select(tribe,GEOID,UID,time,everything()) %>% 

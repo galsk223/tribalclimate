@@ -4,14 +4,15 @@ author: ""
 #date: "`r format(Sys.time(), '%B %d, %Y')`"
 header-includes:
    - \usepackage{rotating, graphicx}
-output: bookdown::pdf_document2
+   - \usepackage[printfigures]{figcaps}
+output: pdf_document
 ---
 
 ```{r setup, include = FALSE}
 
 knitr::opts_chunk$set(echo = TRUE)
 options(scipen=999)
-options(tinytex.verbose = TRUE)
+
 
 ```
 
@@ -66,80 +67,80 @@ df2 <- read_csv("../01_data/clean/00_all_newpolygons.csv") %>%
   select(tribe, everything()) %>% 
   mutate(time = "time 2") 
 
-data_long_0 <- bind_rows(df1,df2) %>% 
+data_long_bytribe <- bind_rows(df1,df2) %>% 
   select(tribe,GEOID,UID,time,everything()) %>% 
   filter(!is.na(tribe)) %>% 
   mutate(tribe = factor(tribe),
          time = factor(time),
          whp = ifelse(is.na(whp),whp_mean,whp)) 
 
-data_t1and2_long_0 <- filter(data_long_0, tribe %in% tribes_time1and2_lst$tribe)
+data_t1and2_long_bytribe <- filter(data_long_bytribe, 
+                                   tribe %in%tribes_time1and2_lst$tribe) 
 
 #Constructing weights and survey objects
-data_long_m1_full <- data_long_0 %>%
+data_long_m1_full <- data_long_bytribe %>%
   group_by(tribe,time) %>%
   summarise(wgt=1/n()) %>%
   ungroup() %>%
-  left_join(data_long_0,
+  left_join(data_long_bytribe,
             .,
-            by=c("tribe","time"))
+            by=c("tribe","time")) %>% 
+  group_by(time, tribe) %>% 
+  summarise(across(c(heatdays_mean,drought_mean,precip,
+                         whp,elevation_mean,tri_mean,SOC_perc,
+                         BasinPortion,AllArea_OilPortion,
+                         AllArea_GasPortion,PADPortion), ~ mean(.x, na.rm = TRUE))) %>% 
+  ungroup()
 
-svy_data_long <- data_long_m1_full %>% 
-  as_survey_design(ids = tribe,weights = wgt)
-
-data_long_m1 <- data_t1and2_long_0 %>%
+data_long_m1 <- data_t1and2_long_bytribe %>%
   group_by(tribe,time) %>%
   summarise(wgt=1/n()) %>%
   ungroup() %>%
-  left_join(data_t1and2_long_0,
+  left_join(data_t1and2_long_bytribe,
             .,
-            by=c("tribe","time")) 
+            by=c("tribe","time")) %>% 
+  group_by(time, tribe) %>% 
+  summarise(across(c(heatdays_mean,drought_mean,precip,
+                         whp,elevation_mean,tri_mean,SOC_perc,
+                         BasinPortion,AllArea_OilPortion,
+                         AllArea_GasPortion,PADPortion), ~ mean(.x, na.rm = TRUE))) %>% 
+  ungroup() 
+
+t <- data_long_m1 %>% 
+  group_by(time) %>% 
+  summarise(Mean_PAD = mean(PADPortion, na.rm = T),
+            Mean_Oil = mean(AllArea_OilPortion, na.rm = T),
+            Mean_Gas = mean(AllArea_GasPortion, na.rm = T),
+            Mean_Basin = mean(BasinPortion, na.rm = T)) %>% 
+  ungroup()
+
+tp <- data_long_m1 %>% 
+  select(time,PADPortion,AllArea_OilPortion,AllArea_GasPortion,BasinPortion) %>% 
+  pivot_longer(-time)
   
+p <- ggplot(tp, aes(x = value, fill = time)) +
+  geom_histogram(alpha = 0.4, binwidth = 0.1, position = 'identity') +
+  facet_wrap(~ name) +
+  ggthemes::theme_tufte()
+
+p
+
 write_rds(data_long_m1,"data_long.rds")
 write_rds(data_long_m1_full,"data_long_all.rds")
-
-svy_data_t1and2_long <- data_long_m1 %>% 
-  as_survey_design(ids = tribe,weights = wgt)
 
 data_long_m2_noOK <- df_subset(c("air_federal","air_state"))
 data_long_m3_OK <- df_subset(c("otsa"))
 
-dat_env <- data_long_m1 %>% 
-  select(tribe, GEOID, time,
-         `Days over 100F`=heatdays_mean,
-         `Drought`=drought_mean,
-         `Precipitation`=precip,
-         `Wildfire Hazard Potential`=whp,
-         `Elevation`=elevation_mean,
-         `Ruggedness`=tri_mean,
-         `Soil Organic Carbon`=SOC_perc,
-         `Oil and Gas Basin`=BasinPortion,
-         `Oil and Gas Basin | Binary`=BasinBinary,
-         `Oil Production`=AllArea_OilPortion,
-         `Gas Production`=AllArea_GasPortion,
-         `Fraction Federal Land`=PADPortion) 
-
-dat_env_all <- data_long_m1_full %>% 
-  select(tribe, GEOID, time,
-          `Days over 100F`=heatdays_mean,
-         `Drought`=drought_mean,
-         `Precipitation`=precip,
-         `Wildfire Hazard Potential`=whp,
-         `Elevation`=elevation_mean,
-         `Ruggedness`=tri_mean,
-         `Soil Organic Carbon`=SOC_perc,
-         `Oil and Gas Basin`=BasinPortion,
-         `Oil and Gas Basin | Binary`=BasinBinary,
-         `Oil Production`=AllArea_OilPortion,
-         `Gas Production`=AllArea_GasPortion,
-         `Fraction Federal Land`=PADPortion) 
-
 # subset to T1 and T2
-dat_env_all_t1 <- filter(dat_env_all, time == "time 1")
-dat_env_all_t2 <- filter(dat_env_all, time == "time 2")
+df_all_t1 <- filter(data_long_m1_full, time == "time 1")
+df_all_t2 <- filter(data_long_m1_full, time == "time 2")
 
-dat_env_t1 <- filter(dat_env, time == "time 1")
-dat_env_t2 <- filter(dat_env, time == "time 2")
+df_t1 <- filter(data_long_m1, time == "time 1")
+df_t2 <- filter(data_long_m1, time == "time 2")
+
+df_t1_bytribe <- filter(data_t1and2_long_bytribe, time == "time 1")
+df_t2_bytribe <- filter(data_t1and2_long_bytribe, time == "time 2")
+
 ```
 
 \newpage
@@ -154,7 +155,7 @@ The objective of this supplement is to provide detail on the analysis of land ch
 
 We focus on land characteristics that are either durable over long time periods or not heavily impacted by the human inhabitants of the land.  We divide the characteristics into categories: climate, mineral resource access, and national lands. The set of climate characteristics consist of: number of extreme temperature days, drought, precipitation, and a measure of wildfire hazard potential. The set of mineral resource access characteristics include: access to oil and gas basins, oil production, and gas production. Finally, we assess the proximity of historical and present-day land to federal lands. The following sections describe the data sources and any processing to construct the variables for analysis.
 
-For historical time periods, we use the counties as described in the manuscript. Similarly, for the present-day time periods, we use census native areas polygons (U.S. Census Bureau, 2018). 
+For historical time periods, we use the counties as described in the manuscript. Similarly, for the present-day time periods, we use census native areas polygons (U.S. Census Bureau, 2018). We aggregate across counties and census native areas to get a panel dataset by tribe and time period.
 
 Table \ref{tab:sum_full} contains summary statistics for the dataset used in the analyses.  However, there are many instances where a tribe is present in only the present-day set or the historical set.  We also present the summary statistics of a dataset with only tribes present in both periods.  Table \ref{tab:sum_both} contains the summary statistics of the Present-day and Historical dataset.  While the number of observations is clearly smaller in the dataset with tribes present in both periods, the distribution of the datasets is very similar suggesting that these tribes who enter or exit the dataset are not systematically different from those in both periods with regard to our land characteristics.
 
@@ -214,8 +215,7 @@ for_summary[[1]] <- data_long_m1 %>%
          `Elevation`=elevation_mean,
          `Ruggedness`=tri_mean,
          `Soil Organic Carbon`=SOC_perc,
-         `Oil and Gas Basin | Portion`=BasinPortion,
-         `Oil and Gas Basin | Binary`=BasinBinary,
+         `Oil and Gas Basin`=BasinPortion,
          `Oil Production`=AllArea_OilPortion,
          `Gas Production`=AllArea_GasPortion,
          `Fraction Federal Land`=PADPortion) %>%
@@ -229,8 +229,7 @@ for_summary[[2]] <- data_long_m1_full %>%
          `Elevation`=elevation_mean,
          `Ruggedness`=tri_mean,
          `Soil Organic Carbon`=SOC_perc,
-         `Oil and Gas Basin | Portion`=BasinPortion,
-         `Oil and Gas Basin | Binary`=BasinBinary,
+         `Oil and Gas Basin`=BasinPortion,
          `Oil Production`=AllArea_OilPortion,
          `Gas Production`=AllArea_GasPortion,
          `Fraction Federal Land`=PADPortion) %>%
@@ -239,21 +238,17 @@ for_summary[[2]] <- data_long_m1_full %>%
 
 stargazer(for_summary[[1]],
           digits = 2,
-          title = "Full Dataset",
+          title = "Tribes Found in Both Present-day and Historical Time Periods",
           header = F,
           label = "tab:sum_full")
 
 stargazer(for_summary[[2]],
           digits = 2,
-          title = "Present-day and Historical Dataset",
+          title = "All Tribes",
           header = F,
           label = "tab:sum_both")
 
-
-
 ```
-
-
 
 
 # Methods
@@ -264,65 +259,105 @@ We assess the robustness of our estimate using several alternative model specifi
 
 - OLS: Ordinary Least Squares (OLS) model using only data on tribes with records in the historical and present-day periods.  
 
-- Weighted OLS: weighted OLS model using only data on tribes with records in the historical and present-day periods.  We construct weights as the inverse of the total number of counties or census native areas associated with a tribe in each time period.  The weighted regression model effectively places equal weight on each tribe given that the number of counties or census native areas varies with the historical range of the tribe.  Larger, more dominant, or tribes with counties or census native areas in the Eastern US may include more counties or census native areas, which effectively increases the weight on those tribes in a simple regression setting. By weighting the observations, the results can be interpreted as a tribe-level analysis. 
+- OLS | All Tribes: OLS model using all available data, including observations for tribes that are only found in either historical or present-day periods.
 
-- Full OLS: OLS model using the full dataset, which includes tribes present in either the historical or present-day periods. The full dataset increases the sample size but may introduce bias due to the dissolution and formation of tribes between our time periods.  
+- OLS | Excluding OTSA: OLS model using only data on tribes with records in the historical and present-day periods, excluding tribes whose present-day land is classified as an Oklahoma Tribal Statistical Area.
 
-- Full Weighted OLS: weighted OLS model using the full dataset.  
+- OLS | Only OTSA: OLS model using only data on tribes with records in the historical and present-day periods, limited to tribes whose present-day land is classified as an Oklahoma Tribal Statistical Area.
 
 - Tribe FE: an OLS regression with tribe fixed effects.  The fixed effect regression estimates tribe-specific means in the historical period, but a common coefficient on the difference between the historical and present-day periods.  This model would control for unobserved factors within a tribe that may influence any relocation policy and thus the characteristics of the counties or census native areas in both the historical and present-day periods.  
 
-- BEZI: zero-inflated Beta regression when the dependent variable is bounded between zero and one (e.g., percent) using only data on tribes with records in the historical and present-day periods..
-
+- Quasi-Binomial: a generalized linear model using a "logit" link function. These models are used for dependent variables bounded between 0 and 1 and with many 0 observations, in this case for the models estimating the portion of types of land. 
 
 # KS Test Results
-
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 # Precipitation
-ks_precip <- ks.test(dat_env_all_t1$Precipitation, dat_env_all_t2$Precipitation)
-ks_precip2 <- ks.test(dat_env_t1$Precipitation, dat_env_t2$Precipitation)
+ks_precip <- ks.test(df_all_t1$precip,
+                     df_all_t2$precip)
+ks_precip2 <- ks.test(df_t1$precip, 
+                      df_t2$precip)
+ks_precip3 <- ks.test(df_t1_bytribe$precip, 
+                      df_t2_bytribe$precip)
 
 # Presence of oil/gas basin (binary)
-ks_og_basin <- ks.test(dat_env_all_t1$"Oil and Gas Basin", dat_env_all_t2$"Oil and Gas Basin")
-ks_og_basin2 <- ks.test(dat_env_t1$"Oil and Gas Basin", dat_env_t2$"Oil and Gas Basin")
-ks_og_basinbinary <- ks.test(dat_env_all_t1$"Oil and Gas Basin | Binary", dat_env_all_t2$"Oil and Gas Basin | Binary")
-ks_og_basinbinary2 <- ks.test(dat_env_t1$"Oil and Gas Basin | Binary", dat_env_t2$"Oil and Gas Basin | Binary")
+ks_og_basin <- ks.test(df_all_t1$BasinPortion, 
+                       df_all_t2$BasinPortion)
+ks_og_basin2 <- ks.test(df_t1$BasinPortion, 
+                        df_t2$BasinPortion)
+ks_og_basin3 <- ks.test(df_t1_bytribe$BasinPortion, 
+                        df_t2_bytribe$BasinPortion)
 
 # Oil Production
-ks_oil <- ks.test(dat_env_all_t1$"Oil Production", dat_env_all_t2$"Oil Production")
-ks_oil2 <- ks.test(dat_env_t1$"Oil Production", dat_env_t2$"Oil Production")
+ks_oil <- ks.test(df_all_t1$AllArea_OilPortion, 
+                  df_all_t2$AllArea_OilPortion)
+ks_oil2 <- ks.test(df_t1$AllArea_OilPortion, 
+                   df_t2$AllArea_OilPortion)
+ks_oil3 <- ks.test(df_t1_bytribe$AllArea_OilPortion, 
+                   df_t2_bytribe$AllArea_OilPortion)
 
 # Gas production
-ks_gas <- ks.test(dat_env_all_t1$"Gas Production", dat_env_all_t2$"Gas Production")
-ks_gas2 <- ks.test(dat_env_t1$"Gas Production", dat_env_t2$"Gas Production")
+ks_gas <- ks.test(df_all_t1$AllArea_GasPortion, 
+                  df_all_t2$AllArea_GasPortion)
+ks_gas2 <- ks.test(df_t1$AllArea_GasPortion, 
+                   df_t2$AllArea_GasPortion)
+ks_gas3 <- ks.test(df_t1_bytribe$AllArea_GasPortion, 
+                   df_t2_bytribe$AllArea_GasPortion)
 
 # Heat
-ks_heat <- ks.test(dat_env_all_t1$"Days over 100F", dat_env_all_t2$"Days over 100F")
-ks_heat2 <- ks.test(dat_env_t1$"Days over 100F", dat_env_t2$"Days over 100F")
+ks_heat <- ks.test(df_all_t1$heatdays_mean, 
+                   df_all_t2$heatdays_mean)
+ks_heat2 <- ks.test(df_t1$heatdays_mean, 
+                    df_t2$heatdays_mean)
+ks_heat3 <- ks.test(df_t1_bytribe$heatdays_mean, 
+                    df_t2_bytribe$heatdays_mean)
 
 # Drought
-ks_drought <- ks.test(dat_env_all_t1$Drought, dat_env_all_t2$Drought)
-ks_drought2 <- ks.test(dat_env_t1$Drought, dat_env_t2$Drought)
+ks_drought <- ks.test(df_all_t1$drought_mean, 
+                      df_all_t2$drought_mean)
+ks_drought2 <- ks.test(df_t1$drought_mean, 
+                       df_t2$drought_mean)
+ks_drought3 <- ks.test(df_t1_bytribe$drought_mean, 
+                       df_t2_bytribe$drought_mean)
 
 # Wildfire risk
-ks_fire <- ks.test(dat_env_all_t1$"Wildfire Hazard Potential", dat_env_all_t2$"Wildfire Hazard Potential")
-ks_fire2 <- ks.test(dat_env_t1$"Wildfire Hazard Potential", dat_env_t2$"Wildfire Hazard Potential")
+ks_fire <- ks.test(df_all_t1$whp,
+                   df_all_t2$whp)
+ks_fire2 <- ks.test(df_t1$whp, 
+                    df_t2$whp)
+ks_fire3 <- ks.test(df_t1_bytribe$whp, 
+                    df_t2_bytribe$whp)
 
 # Elevation
-ks_elevation <- ks.test(dat_env_all_t1$Elevation, dat_env_all_t2$Elevation)
-ks_elevation2 <- ks.test(dat_env_t1$Elevation, dat_env_t2$Elevation)
+ks_elevation <- ks.test(df_all_t1$elevation_mean,
+                        df_all_t2$elevation_mean)
+ks_elevation2 <- ks.test(df_t1$elevation_mean, 
+                         df_t2$elevation_mean)
+ks_elevation3 <- ks.test(df_t1_bytribe$elevation_mean, 
+                         df_t2_bytribe$elevation_mean)
 
 # TRI (ruggedness)
-ks_tri <- ks.test(dat_env_all_t1$Ruggedness, dat_env_all_t2$Ruggedness)
-ks_tri2 <- ks.test(dat_env_t1$Ruggedness, dat_env_t2$Ruggedness)
+ks_tri <- ks.test(df_all_t1$tri_mean,
+                  df_all_t2$tri_mean)
+ks_tri2 <- ks.test(df_t1$tri_mean, 
+                   df_t2$tri_mean)
+ks_tri3 <- ks.test(df_t1_bytribe$tri_mean, 
+                   df_t2_bytribe$tri_mean)
 
 # Fraction federal lands
-ks_fed <- ks.test(dat_env_all_t1$"Fraction Federal Land", dat_env_all_t2$"Fraction Federal Land")
-ks_fed2 <- ks.test(dat_env_t1$"Fraction Federal Land", dat_env_t2$"Fraction Federal Land")
+ks_fed <- ks.test(df_all_t1$PADPortion,
+                  df_all_t2$PADPortion)
+ks_fed2 <- ks.test(df_t1$PADPortion,
+                   df_t2$PADPortion)
+ks_fed3 <- ks.test(df_t1_bytribe$PADPortion, 
+                   df_t2_bytribe$PADPortion)
 
 # SOC
-ks_soc <- ks.test(dat_env_all_t1$"Soil Organic Carbon", dat_env_all_t2$"Soil Organic Carbon")
-ks_soc2 <- ks.test(dat_env_t1$"Soil Organic Carbon", dat_env_t2$"Soil Organic Carbon")
+ks_soc <- ks.test(df_all_t1$SOC_perc, 
+                  df_all_t2$SOC_perc)
+ks_soc2 <- ks.test(df_t1$SOC_perc, 
+                   df_t2$SOC_perc)
+ks_soc3 <- ks.test(df_t1_bytribe$SOC_perc, 
+                   df_t2_bytribe$SOC_perc)
 
 
 # Combine all tests into table
@@ -335,48 +370,90 @@ ks_results <- tibble(
                "Ruggedness",
                "Soil Organic Carbon",
                "Oil and Gas Basin | Portion",
-               "Oil and Gas Basin | Binary",
                "Oil Production",
                "Gas Production",
                "Fraction Federal Lands"),
-  D_sub = c(paste(round(ks_heat2$statistic, digits = 3), "***"),
-            paste(round(ks_drought2$statistic, digits = 3), "***"),
-            paste(formatC(ks_precip2$statistic, format='f', digits = 3), "***"),
-            paste(round(ks_fire2$statistic, digits = 3), "***"),
-            paste(round(ks_elevation2$statistic, digits = 3), "***"),
-            paste(round(ks_tri2$statistic, digits = 3), "***"),
-            paste(round(ks_soc2$statistic, digits = 3), "***"),
-            paste(round(ks_og_basin2$statistic, digits = 3), "***"),
-            paste(round(ks_og_basinbinary2$statistic, digits = 3), "***"),
-            paste(round(ks_oil2$statistic, digits = 3), "***"),
-            paste(round(ks_gas2$statistic, digits = 3), "***"),
-            paste(round(ks_fed2$statistic, digits = 3), "***")),
-  D_all = c(paste(round(ks_heat$statistic, digits = 3), "***"),
-            paste(round(ks_drought$statistic, digits = 3), "***"),
-            paste(formatC(ks_precip$statistic, format='f', digits = 3), "***"),
-            paste(round(ks_fire$statistic, digits = 3), "***"),
-            paste(round(ks_elevation$statistic, digits = 3), "***"),
-            paste(round(ks_tri$statistic, digits = 3), "***"),
-            paste(round(ks_soc$statistic, digits = 3), "***"),
-            paste(round(ks_og_basin$statistic, digits = 3), "***"),
-            paste(round(ks_og_basinbinary$statistic, digits = 3), "***"),
-            paste(round(ks_oil$statistic, digits = 3), "***"),
-            paste(round(ks_gas$statistic, digits = 3), "***"),
-            paste(round(ks_fed$statistic, digits = 3), "***")))
+  D_sub = c(paste(round(ks_heat2$statistic, digits = 3), 
+                  ifelse(ks_heat2$p.value < 0.000595, "***", ifelse(ks_heat2$p.value < 0.05, "**", ifelse(ks_heat2$p.value < 0.1, "*", "")))),
+            paste(round(ks_drought2$statistic, digits = 3), 
+                  ifelse(ks_drought2$p.value < 0.000595, "***", ifelse(ks_drought2$p.value < 0.05, "**", ifelse(ks_drought2$p.value < 0.1, "*", "")))),
+            paste(formatC(ks_precip2$statistic, format='f', digits = 3), 
+                  ifelse(ks_precip2$p.value < 0.000595, "***", ifelse(ks_precip2$p.value < 0.05, "**", ifelse(ks_precip2$p.value < 0.1, "*", "")))),
+            paste(round(ks_fire2$statistic, digits = 3), 
+                  ifelse(ks_fire2$p.value < 0.000595, "***", ifelse(ks_fire2$p.value < 0.05, "**", ifelse(ks_fire2$p.value < 0.1, "*", "")))),
+            paste(round(ks_elevation2$statistic, digits = 3), 
+                  ifelse(ks_elevation2$p.value < 0.000595, "***", ifelse(ks_elevation2$p.value < 0.05, "**", ifelse(ks_elevation2$p.value < 0.1, "*", "")))),
+            paste(round(ks_tri2$statistic, digits = 3), 
+                  ifelse(ks_tri2$p.value < 0.000595, "***", ifelse(ks_tri2$p.value < 0.05, "**", ifelse(ks_tri2$p.value < 0.1, "*", "")))),
+            paste(round(ks_soc2$statistic, digits = 3), 
+                  ifelse(ks_soc2$p.value < 0.000595, "***", ifelse(ks_soc2$p.value < 0.05, "**", ifelse(ks_soc2$p.value < 0.1, "*", "")))),
+            paste(round(ks_og_basin2$statistic, digits = 3), 
+                  ifelse(ks_og_basin2$p.value < 0.000595, "***", ifelse(ks_og_basin2$p.value < 0.05, "**", ifelse(ks_og_basin2$p.value < 0.1, "*", "")))),
+            paste(round(ks_oil2$statistic, digits = 3), 
+                  ifelse(ks_oil2$p.value < 0.000595, "***", ifelse(ks_oil2$p.value < 0.05, "**", ifelse(ks_oil2$p.value < 0.1, "*", "")))),
+            paste(round(ks_gas2$statistic, digits = 3), 
+                  ifelse(ks_gas2$p.value < 0.000595, "***", ifelse(ks_gas2$p.value < 0.05, "**", ifelse(ks_gas2$p.value < 0.1, "*", "")))),
+            paste(round(ks_fed2$statistic, digits = 3), 
+                  ifelse(ks_fed2$p.value < 0.000595, "***", ifelse(ks_fed2$p.value < 0.05, "**", ifelse(ks_fed2$p.value < 0.1, "*", ""))))),
+  D_all = c(paste(round(ks_heat$statistic, digits = 3), 
+                  ifelse(ks_heat$p.value < 0.000595, "***", ifelse(ks_heat$p.value < 0.05, "**", ifelse(ks_heat$p.value < 0.1, "*", "")))),
+            paste(round(ks_drought$statistic, digits = 3), 
+                  ifelse(ks_drought$p.value < 0.000595, "***", ifelse(ks_drought$p.value < 0.05, "**", ifelse(ks_drought$p.value < 0.1, "*", "")))),
+            paste(formatC(ks_precip$statistic, format='f', digits = 3), 
+                  ifelse(ks_precip$p.value < 0.000595, "***", ifelse(ks_precip$p.value < 0.05, "**", ifelse(ks_precip$p.value < 0.1, "*", "")))),
+            paste(round(ks_fire$statistic, digits = 3), 
+                  ifelse(ks_fire$p.value < 0.000595, "***", ifelse(ks_fire$p.value < 0.05, "**", ifelse(ks_fire$p.value < 0.1, "*", "")))),
+            paste(round(ks_elevation$statistic, digits = 3), 
+                  ifelse(ks_elevation$p.value < 0.000595, "***", ifelse(ks_elevation$p.value < 0.05, "**", ifelse(ks_elevation$p.value < 0.1, "*", "")))),
+            paste(round(ks_tri$statistic, digits = 3), 
+                  ifelse(ks_tri$p.value < 0.000595, "***", ifelse(ks_tri$p.value < 0.05, "**", ifelse(ks_tri$p.value < 0.1, "*", "")))),
+            paste(round(ks_soc$statistic, digits = 3),
+                  ifelse(ks_soc$p.value < 0.000595, "***", ifelse(ks_soc$p.value < 0.05, "**", ifelse(ks_soc$p.value < 0.1, "*", "")))),
+            paste(round(ks_og_basin$statistic, digits = 3),
+                  ifelse(ks_og_basin$p.value < 0.000595, "***", ifelse(ks_og_basin$p.value < 0.05, "**", ifelse(ks_og_basin$p.value < 0.1, "*", "")))),
+            paste(round(ks_oil$statistic, digits = 3), 
+                  ifelse(ks_oil$p.value < 0.000595, "***", ifelse(ks_oil$p.value < 0.05, "**", ifelse(ks_oil$p.value < 0.1, "*", "")))),
+            paste(round(ks_gas$statistic, digits = 3), 
+                  ifelse(ks_gas$p.value < 0.000595, "***", ifelse(ks_gas$p.value < 0.05, "**", ifelse(ks_gas$p.value < 0.1, "*", "")))),
+            paste(round(ks_fed$statistic, digits = 3), 
+                  ifelse(ks_fed$p.value < 0.000595, "***", ifelse(ks_fed$p.value < 0.05, "**", ifelse(ks_fed$p.value < 0.1, "*", ""))))),
+  D_tribe = c(paste(round(ks_heat3$statistic, digits = 3), 
+                  ifelse(ks_heat3$p.value < 0.000595, "***", ifelse(ks_heat3$p.value < 0.05, "**", ifelse(ks_heat3$p.value < 0.1, "*", "")))),
+            paste(round(ks_drought3$statistic, digits = 3), 
+                  ifelse(ks_drought3$p.value < 0.000595, "***", ifelse(ks_drought3$p.value < 0.05, "**", ifelse(ks_drought3$p.value < 0.1, "*", "")))),
+            paste(formatC(ks_precip3$statistic, format='f', digits = 3), 
+                  ifelse(ks_precip3$p.value < 0.000595, "***", ifelse(ks_precip3$p.value < 0.05, "**", ifelse(ks_precip3$p.value < 0.1, "*", "")))),
+            paste(round(ks_fire3$statistic, digits = 3), 
+                  ifelse(ks_fire3$p.value < 0.01, "***", ifelse(ks_fire3$p.value < 0.05, "**", ifelse(ks_fire3$p.value < 0.1, "*", "")))),
+            paste(round(ks_elevation3$statistic, digits = 3), 
+                  ifelse(ks_elevation3$p.value < 0.000595, "***", ifelse(ks_elevation3$p.value < 0.05, "**", ifelse(ks_elevation3$p.value < 0.01, "*", "")))),
+            paste(round(ks_tri3$statistic, digits = 3), 
+                  ifelse(ks_tri3$p.value < 0.000595, "***", ifelse(ks_tri3$p.value < 0.05, "**", ifelse(ks_tri3$p.value < 0.1, "*", "")))),
+            paste(round(ks_soc3$statistic, digits = 3), 
+                  ifelse(ks_soc3$p.value < 0.000595, "***", ifelse(ks_soc3$p.value < 0.05, "**", ifelse(ks_soc3$p.value < 0.1, "*", "")))),
+            paste(round(ks_og_basin3$statistic, digits = 3), 
+                  ifelse(ks_og_basin3$p.value < 0.000595, "***", ifelse(ks_og_basin3$p.value < 0.05, "**", ifelse(ks_og_basin3$p.value < 0.1, "*", "")))),
+            paste(round(ks_oil3$statistic, digits = 3), 
+                  ifelse(ks_oil3$p.value < 0.000595, "***", ifelse(ks_oil3$p.value < 0.05, "**", ifelse(ks_oil3$p.value < 0.1, "*", "")))),
+            paste(round(ks_gas3$statistic, digits = 3), 
+                  ifelse(ks_gas3$p.value < 0.000595, "***", ifelse(ks_gas3$p.value < 0.05, "**", ifelse(ks_gas3$p.value < 0.1, "*", "")))),
+            paste(round(ks_fed3$statistic, digits = 3), 
+                  ifelse(ks_fed3$p.value < 0.000595, "***", ifelse(ks_fed3$p.value < 0.05, "**", ifelse(ks_fed3$p.value < 0.1, "*", ""))))))
 
 # kable table of KS tests
 kable_ks_tests <- kable(ks_results, format = "latex", booktabs = TRUE, digits = 3, align="c", linesep = "",
-                        caption = "Kolmogorov-Smirnov Tests",
-                        col.names = c("Variable", "D Statistic", "D-Statistic")) %>%
+                        caption = "Kolmogorov-Smirnov Tests | By Tribe",
+                        col.names = c("Variable", "D Statistic", "D Statistic", "D Statistic")) %>%
   kableExtra::kable_styling(font_size = 9.5) %>%
-  kableExtra::add_header_above(header = c(" "=1,"Tribes with \nT1 and T2 Landholdings"=1,  "All Tribes"=1),
+  kableExtra::add_header_above(header = c(" "=1,"Tribes with \nT1 and T2\n Landholdings"=1,  "All Tribes"=1,   "Tribes with \nT1 and T2\n Landholdings \n By Census Area"=1),
                    align = "c",
                    bold = TRUE) %>%
-  kableExtra::footnote(general = c("*p < 0.1; **p < 0.05; ***p < 0.01")) %>%
-  kableExtra::column_spec(2:3, width = "1.5in") 
+  kableExtra::footnote(general = c("*p < 0.1; **p < 0.05; ***Bonferroni")) %>%
+  kableExtra::column_spec(2:4, width = "1.5in") 
 
 print(kable_ks_tests)
 ```
+
 
 
 # Regression Results
@@ -400,9 +477,10 @@ model.shell[[5]] <- glm_clustered(dep.var,df=data_long_m1,family = "poisson")
 
 sg_table(model.shell,
          dep.name = "Days per Year in excess of 100 degrees F",
-         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Poisson"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Poisson"),
          label = "tab:heat",
          title = "Extreme Heat")
+
 ```
 
 
@@ -422,7 +500,7 @@ model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Mean PDSI",
-         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
          label = "tab:drought",
          title = "Drought")
 ```
@@ -444,7 +522,7 @@ model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Mean Annual Precipitation",
-         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
          label = "tab:precip",
          title = "Precipitation")
 ```
@@ -467,7 +545,7 @@ model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 sg_table(model.shell,
          dep.name = "Mean Wildfire Hazard Potential",
          label = "tab:whp",
-         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
          title = "Wildfire Hazard Potential")
 ```
 
@@ -489,9 +567,10 @@ model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 sg_table(model.shell,
          dep.name = "Elevation",
          label = "tab:elevation",
-         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
          title = "Elevation (meters)")
 ```
+
 
 
 ## Ruggedness
@@ -511,9 +590,10 @@ model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 sg_table(model.shell,
          dep.name = "Ruggedness",
          label = "tab:tri",
-         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
          title = "Total Ruggedness Index")
 ```
+
 
 
 ## Soil Organic Carbon
@@ -533,9 +613,10 @@ model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
 sg_table(model.shell,
          dep.name = "Soil Organic Carbon",
          label = "tab:soc",
-         column.labels = c("OLS","OLS | All Tribes","OLS | Excluding OK","OLS | Only OK","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
          title = "Soil Organic Carbon")
 ```
+
 
 
 ## Oil and Gas Basins
@@ -544,317 +625,168 @@ We evaluate access to oil and gas based on the likelihood that a tribe's CCEs li
 
 Weighted OLS and Full Weighted OLS models show a significant increase in the likelihood for present-day lands to have access to oil and gas reserves. In contrast, the unweighted model results suggests that tribes with larger historical lands experienced reductions in oil and gas access. This result, again, highlights the variation across tribes in the dataset.
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
-
-bezi_data_m1 <- mutate(data_long_m1,
-                    p_all = ifelse(BasinPortion >= 1, .99999, BasinPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_data_m1_full <- mutate(data_long_m1_full,
-                    p_all = ifelse(BasinPortion >= 1, .99999, BasinPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_data_m2_noOK <- mutate(data_long_m2_noOK,
-                    p_all = ifelse(BasinPortion >= 1, .99999, BasinPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_data_m3_OK <- mutate(data_long_m3_OK,
-                    p_all = ifelse(BasinPortion >= 1, .99999, BasinPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_model1 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1, trace = F)
-bezi_model1_full <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1_full, trace = F)
-bezi_model2_noOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m2_noOK, trace = F)
-bezi_model3_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m3_OK, trace = F)
-  
-texreg::screenreg(list(bezi_model1,bezi_model1_full,bezi_model2_noOK,bezi_model3_OK),
-       omit.coef = c("nu|sigma"),
-       caption = "Dependent Variable: Portion Land With Subsurface Oil and Gas",
-       caption.above = T,
-       label = "tab:og_basins",
-       # custom.coef.names = c('mu (Intercept)' = 'Historical (Intercept)',
-       #                        'mu timetime 2' = 'Present-day Change'),
-       # custom.model.names = c("BEZI","BEZI | All Tribes","BEZI | Excluding OK", "BEZI | Only OK", "Logit"),
-       digits = 3,
-       # stars = c(0.001, 0.01, 0.05, 0.1),
-       # symbol = c('$^{***}$','$^{**}$','$^{*}$','.'),
-       ci.force = T,
-       table = FALSE, use.packages = FALSE
-       )
-
-```
-
-\begin{sidewaystable}[!htbp] \centering
-  \caption{Oil and Gas Basins}
-  \label{tab:og_basins}
-\begin{tabular}{l c c c c }
-\\[-1.8ex]\hline
-\\[-1.8ex]
- & \multicolumn{4}{c}{Dependent Variable: Portion Land With Subsurface Oil and Gas} \\
-\hline [1ex]
- & BEZI & BEZI | All Tribes & BEZI | Excluding OK & BEZI | Only OK \\
-\hline
-Historical (Intercept)    & $1.195^{***}$ &   $1.155 ^{***}$        & $1.150 ^{***}$   &   $1.297 ^{***}$               \\
-                     & $(1.146;\ 1.244)$ &   $(1.111;\ 1.198)$ &   $(1.090;\ 1.210)$    &   $(1.235;\ 1.360)$          \\ \ [1ex]
-Present-day Change     & $0.240.$     &   $0.326^{**}$         & $0.363 ^{*}$   &   $0.028$              \\
-                     & $(-0.016;\ 0.497)$   &   $(0.094;\ 0.557)$   &   $(0.038;\ 0.687)$   & $(-0.387;\ 0.442)$            \\ [1ex]
-
-\hline \\[-1.8ex]
-Obs.           & 7516                & 9796              &  5538   &    3733               \\
-
-\hline
-\hline \\[-1.8ex]
-\multicolumn{5}{l}{{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01}}
-\end{tabular}
-
-
-\end{sidewaystable}
-
-
-```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",4)
-dep.var <- "BasinBinary"
+dep.var <- "BasinPortion"
 
-model.shell[[1]] <- glm_clustered(dep.var, family = "binomial", df = data_long_m1)
-model.shell[[2]] <- glm_clustered(dep.var, family = "binomial", df = data_long_m1_full)
-model.shell[[3]] <- glm_clustered(dep.var, family = "binomial", df = data_long_m2_noOK)
-model.shell[[4]] <- glm_clustered(dep.var, family = "binomial", df = data_long_m3_OK)
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
 sg_table(model.shell,
-         dep.name = "Dummy for Land With Subsurface Oil and Gas",
-         label = "tab:soc",
-         column.labels = c("Logit","Logit | All Tribes","Logit | Excluding OK","Logit | Only OK"),
-         title = "Tribes with Land With Subsurface Oil and Gas")
-
+         dep.name = "Portion Land With Subsurface Oil and Gas",
+         label = "tab:og_basins_ols",
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         title = "Oil and Gas Basins")
 ```
+
 
 
 ## Oil Production
 
 We compare annual oil production (measured in thousands of barrels) between historical and present-day lands, with model specifications providing some evidence that there is less oil production on present-day CCEs . While our primary OLS specification shows a statistically insignificant reduction in oil production (123 thousand barrels), additional model specifications show significant reductions.  When the full dataset is included, the average oil production of present-day CCEs falls by 334 thousand barrels per year, a 50% reduction from the average across the historical CCEs (783 thousand barrels).
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",4)
+dep.var <- "AllArea_OilPortion"
 
-bezi_data_m1 <- mutate(data_long_m1,
-                    p_all = ifelse(AllArea_OilPortion >= 1, .99999, AllArea_OilPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
-bezi_data_m1_full <- mutate(data_long_m1_full,
-                    p_all = ifelse(AllArea_OilPortion >= 1, .99999, AllArea_OilPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_data_m2_noOK <- mutate(data_long_m2_noOK,
-                    p_all = ifelse(AllArea_OilPortion >= 1, .99999, AllArea_OilPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_data_m3_OK <- mutate(data_long_m3_OK,
-                    p_all = ifelse(AllArea_OilPortion >= 1, .99999, AllArea_OilPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_model1 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1, trace = F)
-bezi_model1_full <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1_full, trace = F)
-bezi_model2_noOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m2_noOK, trace = F)
-bezi_model3_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m3_OK, trace = F)
-
-texreg::screenreg(list(bezi_model1,bezi_model1_full,bezi_model2_noOK,bezi_model3_OK),
-       omit.coef = c("nu|sigma"),
-       caption = "Dependent Variable: Portion Land Used in Oil Production",
-       caption.above = T,
-       label = "tab:portion_oil",
-       custom.coef.names = c('mu (Intercept)' = 'Historical (Intercept)',
-                              'mu timetime 2' = 'Present-day Change'),
-       custom.model.names = c("BEZI","BEZI | All Tribes","BEZI | Excluding OK", "BEZI | Only OK"),
-       digits = 3,
-       # stars = c(0.001, 0.01, 0.05, 0.1),
-       # symbol = c('$^{***}$','$^{**}$','$^{*}$','.'),
-       ci.force = T,
-       table = FALSE, use.packages = FALSE
-       )
-
-
+sg_table(model.shell,
+         dep.name = "Portion Land Used in Oil Production",
+         label = "tab:og_oil_ols",
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         title = "Oil Production")
 ```
-\begin{sidewaystable}[!htbp] \centering
-  \caption{Prevalence of Oil Production}
-  \label{tab:og_oil}
-\begin{tabular}{l c c c c }
-\\[-1.8ex]\hline
-\hline \\[-1.8ex]
- & \multicolumn{4}{c}{Dependent Variable: Portion Land Used in Oil Production} \\
-\hline
- & BEZI & BEZI | All Tribes & BEZI | Excluding OK & BEZI | Only OK \\
-\hline
-Historical (Intercept)    & $-1.532 ^{***}$ &   $-1.592  ^{***}$        & $-1.735  ^{***}$   &   $-1.371^{***}$               \\
-                     & $(-1.581;\ -1.482)$ &   $(-1.637;\ -1.547)$ &   $(-1.801;\ -1.670)$    &   $(-1.429;\ -1.313)$          \\
-Present-day Change     & $0.260.$     &   $0.319 ^{*}$         & $-0.156$   &   $0.831^{***} $              \\
-                     & $(-0.025;\  0.545)$   &   $(0.051;\  0.588)$   &   $(-0.553;\  0.240)$   & $(0.428;\  1.233)$            \\
-
-\hline \\[-1.8ex]
-Obs.           & 7516                & 9796              &  5538   &    3733               \\
-
-\hline
-\hline \\[-1.8ex]
-\multicolumn{5}{l}{{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01}}
-\end{tabular}
 
 
-\end{sidewaystable}
 
 ## Gas Production
 
 Drawing on the U.S. Department of Agriculture's natural gas production data (measured in billion cubic feet), we compare gas production between historical and present-day lands.  Our estimates indicate that gas production increased by 4.29 billion cubic feet per year in present-day CCEs up from 6.1 billion cubic feet on the historical CCEs.  However, these results do not seem to be robust across specifications.  Additional model specification yield mixed results. The Weighted, Full Weighted OLS, and Tribe Fixed Effects models show insignificant changes in gas production between time periods. 
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",4)
+dep.var <- "AllArea_GasPortion"
 
-bezi_data_m1 <- mutate(data_long_m1,
-                    p_all = ifelse(AllArea_GasPortion >= 1, .99999, AllArea_GasPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
-bezi_data_m1_full <- mutate(data_long_m1_full,
-                    p_all = ifelse(AllArea_GasPortion >= 1, .99999, AllArea_GasPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_data_m2_noOK <- mutate(data_long_m2_noOK,
-                    p_all = ifelse(AllArea_GasPortion >= 1, .99999, AllArea_GasPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_data_m3_OK <- mutate(data_long_m3_OK,
-                    p_all = ifelse(AllArea_GasPortion >= 1, .99999, AllArea_GasPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_model1 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1, trace = F)
-bezi_model1_full <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1_full, trace = F)
-bezi_model2_noOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m2_noOK, trace = F)
-bezi_model3_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m3_OK, trace = F)
-
-texreg::screenreg(list(bezi_model1,bezi_model1_full,bezi_model2_noOK,bezi_model3_OK),
-       omit.coef = c("nu|sigma"),
-       caption = "Dependent Variable: Portion Land Used in Gas Production",
-       caption.above = T,
-       label = "tab:portion_gas",
-       custom.coef.names = c('mu (Intercept)' = 'Historical (Intercept)',
-                              'mu timetime 2' = 'Present-day Change'),
-       custom.model.names = c("BEZI","BEZI | All Tribes","BEZI | Excluding OK", "BEZI | Only OK"),
-       digits = 3,
-       # stars = c(0.001, 0.01, 0.05, 0.1),
-       # symbol = c('$^{***}$','$^{**}$','$^{*}$','.'),
-       ci.force = T,
-       table = FALSE, use.packages = FALSE
-       )
-
+sg_table(model.shell,
+         dep.name = "Portion Land Used in Oil Production",
+         label = "tab:og_gas_ols",
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         title = "Gas Production")
 ```
-\begin{sidewaystable}[!htbp] \centering
-  \caption{Prevalence of Gas Production}
-  \label{tab:og_gas}
-\begin{tabular}{l c c c c }
-\\[-1.8ex]\hline
-\hline \\[-1.8ex]
- & \multicolumn{4}{c}{Dependent Variable: Portion Land Used in Gas Production} \\
-\hline
- & BEZI & BEZI | All Tribes & BEZI | Excluding OK & BEZI | Only OK \\
-\hline
-Historical (Intercept)    & $-1.661^{***}$ &   $-1.746^{***}$        & $-1.797^{***}$   &   $-1.559^{***}$               \\
-                     & $(-1.710;\ -1.611)$ &   $(-1.791;\ -1.702)$ &   $(-1.862;\ -1.732)$    &   $(-1.617;\ -1.501)$          \\
-Present-day Change     & $0.606^{***} $     &   $0.775^{***}$         & $0.253$   &   $0.989^{***} $              \\
-                     & $(0.302;\  0.910)$   &   $(0.501;\  1.049)$   &   $(-0.184;\  0.690)$   & $(0.573;\  1.405)$            \\
-
-\hline \\[-1.8ex]
-Obs.           & 7516                & 9796              &  5538   &    3733               \\
-
-\hline
-\hline \\[-1.8ex]
-\multicolumn{5}{l}{{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01}}
-\end{tabular}
 
 
-\end{sidewaystable}
 
 ## Federal Lands
 
 Finally, we study the difference between proximity to federal lands during the historical and present-day periods.  We estimate two types of models on the two datasets.  The first model is a Zero-Inflated Beta model designed to analyze data bounded by 0 and 1. The zero-inflated version of the model accounts for the over abundance of zeros.  The results suggest that present-day lands are closer to federal lands compared to historical lands.  The BEZI and Full BEZI coefficient estimates on Present-day Change is 0.51 and 0.52, which implies that the odds of being in proximity to federal lands in the present-day period are 1.65 higher than in the historial period.  The OLS estimates suggest that the present-day CCEs are about 11% more likely to be near federal lands.  
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE, include=FALSE,results = 'asis'}
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",4)
+dep.var <- "PADPortion"
 
-bezi_data_m1 <- mutate(data_long_m1,
-                    p_all = ifelse(PADPortion >= 1, .99999, PADPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
+model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
+model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
-bezi_data_m1_full <- mutate(data_long_m1_full,
-                    p_all = ifelse(PADPortion >= 1, .99999, PADPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_data_m2_noOK <- mutate(data_long_m2_noOK,
-                    p_all = ifelse(PADPortion >= 1, .99999, PADPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_data_m3_OK <- mutate(data_long_m3_OK,
-                    p_all = ifelse(PADPortion >= 1, .99999, PADPortion)) %>%
-  filter(!is.na(p_all)) %>%
-  dplyr::select(time, tribe, p_all,wgt)
-
-bezi_model1 <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1, trace = F)
-bezi_model1_full <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m1_full, trace = F)
-bezi_model2_noOK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m2_noOK, trace = F)
-bezi_model3_OK <- gamlss::gamlss(p_all ~ time, family = "BEZI", data = bezi_data_m3_OK, trace = F)
-
-texreg::screenreg(list(bezi_model1,bezi_model1_full,bezi_model2_noOK,bezi_model3_OK),
-       omit.coef = c("nu|sigma"),
-       caption = "Dependent Variable: Proximity to Federal Lands",
-       caption.above = T,
-       label = "tab:pad",
-       custom.coef.names = c('mu (Intercept)' = 'Historical (Intercept)',
-                              'mu timetime 2' = 'Present-day Change'),
-       custom.model.names = c("BEZI","BEZI | All Tribes","BEZI | Excluding OK", "BEZI | Only OK"),
-       digits = 3,
-       # stars = c(0.001, 0.01, 0.05, 0.1),
-       # symbol = c('$^{***}$','$^{**}$','$^{*}$','.'),
-       ci.force = T,
-       table = FALSE, use.packages = FALSE
-       )
-
+sg_table(model.shell,
+         dep.name = "Proximity to Federal Lands",
+         label = "tab:pad_ols",
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         title = "Federal Lands")
 ```
-\begin{sidewaystable}[!htbp] \centering
-  \caption{Proximity to Federal Lands}
-  \label{tab:pad}
-\begin{tabular}{l c c c c }
-\\[-1.8ex]\hline
-\hline \\[-1.8ex]
- & \multicolumn{4}{c}{Dependent Variable: Proximity to Federal Lands} \\
-\hline
- & BEZI & BEZI | All Tribes & BEZI | Excluding OK & BEZI | Only OK \\
-\hline
-Historical (Intercept)    & $-4.693^{***}$ &   $-4.708^{***}$        & $-4.610^{***}$   &   $-4.876^{***}$               \\
-                     & $(-4.733;\ -4.654)$ &   $(-4.742;\ -4.674)$ &   $(-4.655;\ -4.565)$    &   $(-4.937;\ -4.815)$          \\
-Present-day Change     & $0.626^{***} $     &   $0.622^{***}$         & $0.701^{***}$   &   $-0.036$              \\
-                     & $(0.521;\  0.731)$   &   $(0.528;\  0.716)$   &   $(0.591;\  0.811)$   & $(-0.374;\  0.302)$            \\
 
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+# bezi_m1 <- data_long_m1 %>%
+#   mutate(BasinPortion = ifelse(BasinPortion >= 1, .99999, BasinPortion),
+#          AllArea_OilPortion = ifelse(AllArea_OilPortion >= 1, .99999, AllArea_OilPortion),
+#          AllArea_GasPortion = ifelse(AllArea_GasPortion >= 1, .99999, AllArea_GasPortion),
+#          PADPortion = ifelse(PADPortion >= 1, .99999, PADPortion))
+# 
+# con<-gamlss::gamlss.control(gd.tol=1e-4, c.crit = 1e-4, nu.step = 0.0001)
+# 
+# bezi_model_basins <- gamlss::gamlss(BasinPortion ~ time, family = "BEZI",
+#                                 nu.formula = BasinPortion ~ time,
+#                                 data = na.omit(bezi_m1), trace = F)
+# bezi_model_oil <- gamlss::gamlss(AllArea_OilPortion ~ time, family = "BEZI",
+#                                 nu.formula = AllArea_OilPortion ~ time,
+#                                 data = na.omit(bezi_m1), trace = F)
+# bezi_model_gas <- gamlss::gamlss(AllArea_GasPortion ~ time, family = "BEZI",
+#                                 nu.formula = AllArea_GasPortion ~ time,
+#                                 data = na.omit(bezi_m1), trace = F)
+# logit <- glm_clustered(dep.var = "AllArea_GasPortion",
+#                        df=data_long_m1,family = "binomial")
+# 
+# # bezi_model_pad <- gamlss::gamlss(PADPortion ~ time, family = "binomial",
+# #                                 data = na.omit(bezi_m1), trace = F,
+# #                                 control=con)
+# #
+# 
+# summary(bezi_model_basins)
+# summary(bezi_model_oil)
+# summary(bezi_model_gas)
+# 
+# texreg::screenreg(list(bezi_model_basins,bezi_model_oil,bezi_model_gas,bezi_model_pad),
+#        custom.model.names = c("Basins","Oil","Gas","PAD"),
+#        digits = 3,
+#        ci.force = T
+#        )
+# 
+# 
+# texreg::screenreg(list(bezi_model_basins,bezi_model_oil,bezi_model_gas),
+#        custom.model.names = c("Basins","Oil","Gas"),
+#        digits = 3,
+#        ci.force = T
+#        )
+```
+\begin{table}[!htbp] \centering 
+\footnotesize
+  \caption{BEZI Results} 
+  \label{tab:bezi} 
+\begin{tabular}{l c c c c c}
+\\[-1.8ex]\hline 
+\hline \\[-1.8ex] 
+ & \multicolumn{4}{c}{BEZI Results} \\ 
+\hline 
+ & Oil and Gas Basins & Oil Production & Gas Production & Federal Lands & Federal Lands \\
+ & (1) & (2) & (3) & (4) & (5) \\
+\hline  
+\textbf{Mu Function} \\
+\hspace{2mm} Historical (Intercept)  & $-0.297^{**}$ & $-2.690^{***}$  & $-2.908^{***}$  &  $-3.863$& \\
+                     & $(-0.562;\ -0.032)$ &  $(-2.967;\ -2.414)$ &  $(-3.168;\ -2.649)$  &  $(-4.041;\ -3.685)$& \\[1ex] 
+\hspace{2mm} Present-day Change     & $1.638^{***}$     &   $0.722^{***}$         & $1.041^{***}$   &   $-0.168$& \\
+                     & $(1.180;\ 2.096)$   &   $(0.372;\ 1.071)$   &   $(0.688;\ 1.394)$   & $(-0.3738;\ 0.0378)$ &\\[1ex] 
+\textbf{Nu Function}  \\
+\hspace{2mm} Historical (Intercept)    & $-0.280^{*}$ &   $-0.770^{***}$        & $-1.294^{***}$   & &  \\
+                     & $(-0.595;\ 0.035)$ &   $(-1.64;\ -1.55)$ &   $(-1.673;\ -0.914)$    &  & \\[1ex] 
+\hspace{2mm} Present-day Change     & $1.156^{***}$     &   $1.853^{***}$         & $2.644^{***}$   &   & \\
+                     & $(0.700;\ 1.612)$   &   $(1.371;\ 2.335)$   &   $(2.113;\ 3.175)$   & & \\[1ex] 
+\textbf{Logit}  \\
+\hspace{2mm} Historical (Intercept)    &  &     &    &   &  $-3.383^{***}$ \\
+                     &  &   &  &   &  $(-3.702;\ -3.064)$ \\[1ex] 
+\hspace{2mm} Present-day Change     &    &    &       &    & $-0.049$   \\
+                     &  &   &   &  & $(-0.4978;\ 0.3998)$ \\[1ex] 
 \hline \\[-1.8ex]
-Obs.           & 7516                & 9796              &  5538   &    3733               \\
+Obs.           & 328              & 328              &  328   &    328   &    328              \\
 
-\hline
-\hline \\[-1.8ex]
-\multicolumn{5}{l}{{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.01}}
+\hline 
+\hline \\[-1.8ex] 
+\multicolumn{5}{l}{{$^{*}$p$<$0.1; $^{**}$p$<$0.05; $^{***}$p$<$0.0005952381}}
 \end{tabular}
 
 
-\end{sidewaystable}
-
-
-
+\end{table} 
 
 
 \newpage

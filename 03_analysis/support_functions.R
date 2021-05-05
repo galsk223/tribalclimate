@@ -24,7 +24,13 @@ df_subset <- function(rts){
       ungroup() %>%
       left_join(data_long_rts_0,
                 .,
-                by=c("tribe","time"))
+                by=c("tribe","time")) %>% 
+      group_by(time, tribe) %>% 
+      summarise(across(c(heatdays_mean,drought_mean,precip,
+                         whp,elevation_mean,tri_mean,SOC_perc,
+                         BasinPortion,AllArea_OilPortion,
+                         AllArea_GasPortion,PADPortion), ~ mean(.x, na.rm = TRUE))) %>% 
+      ungroup()
     
     data_t1and2_long_rts <- data_t1and2_long_rts_0 %>%
       group_by(tribe,time) %>%
@@ -32,7 +38,13 @@ df_subset <- function(rts){
       ungroup() %>%
       left_join(data_t1and2_long_rts_0,
                 .,
-                by=c("tribe","time"))
+                by=c("tribe","time")) %>% 
+      group_by(time, tribe) %>% 
+      summarise(across(c(heatdays_mean,drought_mean,precip,
+                         whp,elevation_mean,tri_mean,SOC_perc,
+                         BasinPortion,AllArea_OilPortion,
+                         AllArea_GasPortion,PADPortion), ~ mean(.x, na.rm = TRUE))) %>% 
+      ungroup()
     
     return(data_t1and2_long_rts)
   } else {
@@ -222,6 +234,22 @@ glm_clustered <- function(dep.var,df,family){
   return(list(results=model.out,obs=obs))
 }
 
+glm_qb <- function(dep.var,df,family){
+  
+  df_qb <- df %>% 
+    mutate(dep.var = as.factor(dep.var))
+  
+  m.temp <- glm(formula(str_c(dep.var, " ~ time")),
+                  family = family,
+                  data = df_qb) 
+  
+  model.out <- tidy_to_coeftest(tidy(m.temp))
+  
+  obs <- nobs(m.temp)
+  
+  return(list(results=model.out,obs=obs))
+}
+
 
 sg_table <- function(model.shell,dep.name,...){
   require(stargazer)
@@ -235,12 +263,16 @@ sg_table <- function(model.shell,dep.name,...){
             dep.var.caption = str_c("Dependent Variable: ",dep.name),
             #column.labels = col.names,
             model.numbers = T,
+            font.size = "footnotesize",
+            column.sep.width = "0pt",
             covariate.labels = c("Historical (Intercept)","Present-day Change"),
             #title = "Extent of Area Occupied",
             add.lines = list(c("Obs",comma(map_dbl(model.shell,"obs")))),
-            float.env = "sidewaystable",
-            notes = c("95\\% confidence intervals in parentheses based on twoway-clustered standard errors (tribe and CCE)."),
+            # float.env = "sidewaystable",
+            notes = c("95\\% confidence intervals in parentheses based on clustered standard errors (tribe)."),
             notes.align = "l",
             header = F,
+            star.char = c("*","**","***"),
+            star.cutoffs = c(0.1,0.05,0.0005952381),
             ...)
 }

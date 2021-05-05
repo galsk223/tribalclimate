@@ -34,6 +34,8 @@ library(clubSandwich)
 library(srvyr)
 library(survey)
 library(janitor)
+library(ggridges)
+library(cowplot)
 
 conflict_prefer("filter", "dplyr")
 conflict_prefer("select", "dplyr")
@@ -250,6 +252,275 @@ stargazer(for_summary[[2]],
 
 ```
 
+```{r, message = FALSE, warning = FALSE, echo = FALSE,fig.cap = "Density of Variables"}
+df_plot <- data_long_m1 %>% # only tribes with T1 and T2
+  mutate(heatdays_mean_log = log(heatdays_mean + 1)) %>%
+  dplyr::select(tribe, time, 
+                `Days over 100F`=heatdays_mean,
+                'Log Days over 100F'= heatdays_mean_log,
+                `Drought`=drought_mean,
+                `Precipitation`=precip,
+                `Wildfire Hazard Potential`=whp,
+                `Elevation`=elevation_mean,
+                `Ruggedness`=tri_mean,
+                `Soil Organic Carbon`=SOC_perc,
+                `Oil and Gas Basin`=BasinPortion,
+                `Oil Production`=AllArea_OilPortion,
+                `Gas Production`=AllArea_GasPortion,
+                `Fraction Federal Land`=PADPortion) %>%
+  pivot_longer(cols = c("Days over 100F", "Log Days over 100F", "Drought", 
+                        "Precipitation", "Wildfire Hazard Potential", "Elevation", "Ruggedness",
+                        "Soil Organic Carbon", "Fraction Federal Land", "Oil and Gas Basin", 
+                        "Oil Production", "Gas Production"), 
+               names_to = "variable", 
+               values_to = "value") %>% filter(!is.na(value))
+
+# color pal
+my_pal <- c("#994F00", "#006CD1")
+
+# Extreme Heat - Days over 100 - Log
+heat_plot <- ggplot(data = subset(df_plot, variable == "Log Days over 100F"), 
+                    aes(x=value, y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
+                      point_shape = "|", point_size = 6, size = .65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height=.000, yoffset= -.00),
+                      alpha=.5,show.legend = T) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +   coord_cartesian(expand = FALSE, clip="on", xlim=c(0,NA)) +
+  ylab("") +
+  xlab("Extreme Heat (log scale)")
+
+
+# Fire Risk
+fire_plot <- ggplot(data = subset(df_plot, variable == "Wildfire Hazard Potential"),
+                    aes(x=value, y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
+                      point_shape = "|", point_size = 6, size = 0.65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height = .000, yoffset= -.00),
+                      alpha=.5,show.legend = T) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical", "Present Day")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical", "Present Day")) + 
+  scale_x_continuous(breaks=seq(0, 7, 1)) +
+  coord_cartesian(expand = FALSE, clip="on", xlim=c(0,NA)) +
+  ylab("") +
+  xlab("Wildfire Risk") 
+
+# Oil and Gas Basin
+og_plot <- ggplot(data = subset(df_plot, variable == "Oil and Gas Basin"), 
+                  aes(x=value, y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .75, rel_min_height = .01,
+                      point_shape = "|", point_size = 6, size = .65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height=.00, yoffset= -.0),
+                      alpha=.5,show.legend = T) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) + 
+  coord_cartesian(expand = FALSE, clip="on", xlim=c(0,1.0)) + # c(-.25,1.25)
+  scale_x_continuous(breaks=c(0,.25,.5,.75,1)) +
+  ylab("") +
+  xlab("Oil and Gas Basins") 
+
+# Precipitation - Log 
+precip_plot <- ggplot(data = subset(df_plot, variable == "Precipitation"), 
+                      aes(x=log(value), y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
+                      point_shape = "|", point_size = 3, size = 0.65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height = .00, yoffset= .06),
+                      alpha=.5,show.legend = T, na.rm = TRUE) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +   coord_cartesian(expand = FALSE, clip="off") +
+  ylab("") +
+  xlab("Precipitation (log scale)")
+
+# Drought plot
+drought_plot <- ggplot(data = subset(df_plot, variable == "Drought"), 
+                       aes(x=value, y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
+                      point_shape = "|", point_size = 3, size = 0.65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height = .011, yoffset= 1.2),
+                      alpha=.5,show.legend = T, na.rm = TRUE) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) + 
+  coord_cartesian(expand = FALSE, clip="off") +
+  ylab("") +
+  xlab("Drought")
+
+# Elevation Plot
+elevation_plot <- ggplot(data = subset(df_plot, variable == "Elevation"), 
+                         aes(x=log(value +1), y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
+                      point_shape = "|", point_size = 3, size = 0.65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height = .00, yoffset= .05),
+                      alpha=.5,show.legend = T, na.rm = TRUE) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) + 
+  coord_cartesian(expand = FALSE, clip="off") +
+  ylab("") +
+  xlab("Elevation (log scale)")
+
+# Ruggedness plot
+ruggedness_plot <- ggplot(data = subset(df_plot, variable == "Ruggedness"), 
+                          aes(x=value, y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
+                      point_shape = "|", point_size = 7, size = 0.65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height = .000, yoffset= -.000),
+                      alpha=.5,show.legend = T, na.rm = TRUE) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) + 
+  coord_cartesian(expand = FALSE, clip="on", xlim=c(0,NA)) +
+  ylab("") +
+  xlab("Ruggedness")
+
+
+# SOC Plot
+soc_plot <- ggplot(data = subset(df_plot, variable == "Soil Organic Carbon"), 
+                   aes(x=value, y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
+                      point_shape = "|", point_size = 6, size = 0.65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height = .000, yoffset= -.00),
+                      alpha=.5,show.legend = T, na.rm = TRUE) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) + 
+  coord_cartesian(expand = FALSE, clip="on", xlim=c(0,NA)) +
+  ylab("") +
+  xlab("Soil Organic Carbon")
+
+
+# Federal Lands plot
+fed_plot <- ggplot(data = subset(df_plot, variable == "Fraction Federal Land"), 
+                   aes(x=value, y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
+                      point_shape = "|", point_size = 6, size = 0.65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height = .00, yoffset= -.0),
+                      alpha=.5,show.legend = T, na.rm = TRUE) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) + 
+  coord_cartesian(expand = FALSE, clip="on", xlim=c(0,NA)) +
+  ylab("") +
+  xlab("Fraction of Federal Lands")
+
+
+# Oil production
+oil_plot <- ggplot(data = subset(df_plot, variable == "Oil Production"), 
+                   aes(x=value, y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
+                      point_shape = "|", point_size = 6, size = 0.65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height = .011, yoffset= -.00),
+                      alpha=.5,show.legend = T, na.rm = TRUE) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) + 
+  coord_cartesian(expand = FALSE, clip="on", xlim=c(0,NA)) +
+  ylab("") +
+  xlab("Oil Production")
+
+
+# Gas production
+gas_plot <- ggplot(data = subset(df_plot, variable == "Gas Production"),
+                   aes(x=value, y="", fill = time, color = time)) +
+  geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
+                      point_shape = "|", point_size = 6, size = 0.65,
+                      quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
+                      position = position_points_jitter(height = .011, yoffset= -.00),
+                      alpha=.5,show.legend = T, na.rm = TRUE) +
+  theme_minimal(base_size = 15) +
+  theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
+        axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
+        axis.text.x= element_text(family="Helvetica", size=10),
+        legend.text=element_text(size=12, family="Helvetica")) +
+  scale_fill_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) +
+  scale_color_manual(name="", values = my_pal, labels = c("Historical Lands", "Present Day Lands")) + 
+  coord_cartesian(expand = FALSE, clip="on", xlim=c(0,NA)) +
+  ylab("") +
+  xlab("Gas Production")
+
+
+# Final plot for appendix
+all_plots_app <- plot_grid(heat_plot + theme(legend.position="none"),
+                       drought_plot + theme(legend.position="none"),
+                       precip_plot + theme(legend.position="none"),
+                       fire_plot + theme(legend.position="none"),
+                       elevation_plot + theme(legend.position="none"),
+                       ruggedness_plot + theme(legend.position="none"),
+                       soc_plot + theme(legend.position="none"),
+                       og_plot + theme(legend.position="none"),
+                       oil_plot + theme(legend.position="none"),
+                       gas_plot + theme(legend.position="none"),
+                       fed_plot + theme(legend.position="none"),
+                       labels = c("A","B","C","D", "E", "F", "G", "H", "I", "J", "K"),
+                       nrow = 4,
+                       # hjust = 0,
+                       label_size=8)
+
+legend <- get_legend(
+  # create some space to the left of the legend
+  fire_plot + #grabbing legend from fire_plot
+    guides(color = guide_legend(nrow = 2)) +
+    theme(legend.position = "bottom")
+)
+
+final_plot_app <- plot_grid(all_plots_app, legend, ncol = 1, rel_heights= c(1,.1))
+final_plot_app
+
+```
 
 # Methods
 

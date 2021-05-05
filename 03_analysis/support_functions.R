@@ -192,16 +192,18 @@ ols_clustered <- function(dep.var,df,clust.var){
   return(list(results=model.out,obs=obs))
 }
 
+# dep.var = "heatdays_mean"
+# df = data_long_m1
 
-ols_robust <- function(dep.var,df,clust.var){
+ols_robust <- function(dep.var,df){
   require(broom)
   m.temp <- lm(formula(str_c(dep.var, " ~ time")),
                   data = df) 
+  coef <- lmtest::coeftest(m.temp, vcov = sandwich::vcovHC(m.temp, type = "HC0"))
   
-  model.out <- fixest_to_coeftest(m.temp,df,clust.var)
+  model.out <- tidy_to_coeftest(tidy(coef))
   
   obs <- nobs(m.temp)
-  
   
   return(list(results=model.out,obs=obs))
 }

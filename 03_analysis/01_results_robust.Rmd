@@ -252,19 +252,6 @@ stargazer(for_summary[[2]],
 
 ```
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-land_sum <- read_rds("../01_data/cache/land_sum.rds")
-
-land_area_kable <- kableExtra::kable(land_sum, format = "latex", booktabs = TRUE, 
-                                     digits = 0, align="lcc", linesep = "",
-                                     caption = "Change in Land Area per Tribe",
-                                     format.args = list(big.mark = ",")) %>%
-  kableExtra::kable_styling(font_size = 9.5, latex_options = c('hold_position')) %>%
-  kableExtra::footnote(general = c("Land area is calculated by tribe and in some cases includes coextensive", "areas where more than one tribe share a location.")) 
-
-print(land_area_kable)
-```
-
 ```{r, message = FALSE, warning = FALSE, echo = FALSE,fig.cap = "Density of Variables", fig.height=8}
 df_plot <- data_long_m1 %>% # only tribes with T1 and T2
   mutate(heatdays_mean_log = log(heatdays_mean + 1)) %>%
@@ -725,15 +712,14 @@ ks_results <- tibble(
                   ifelse(ks_fed3$p.value < 0.000595, "***", ifelse(ks_fed3$p.value < 0.05, "**", ifelse(ks_fed3$p.value < 0.1, "*", ""))))))
 
 # kable table of KS tests
-kable_ks_tests <- kable(ks_results, format = "latex", booktabs = TRUE,
-                        digits = 3, align="c", linesep = "",
+kable_ks_tests <- kable(ks_results, format = "latex", booktabs = TRUE, digits = 3, align="c", linesep = "",
                         caption = "Kolmogorov-Smirnov Tests | By Tribe",
                         col.names = c("Variable", "D Statistic", "D Statistic", "D Statistic")) %>%
   kableExtra::kable_styling(font_size = 9.5) %>%
   kableExtra::add_header_above(header = c(" "=1,"Tribes with \nT1 and T2\n Landholdings"=1,  "All Tribes"=1,   "Tribes with \nT1 and T2\n Landholdings \n By Census Area"=1),
                    align = "c",
                    bold = TRUE) %>%
-  kableExtra::footnote(general = c("*p < 0.1; **p < 0.05; ***Bonferroni = 0.0005952381")) %>%
+  kableExtra::footnote(general = c("*p < 0.1; **p < 0.05; ***Bonferroni")) %>%
   kableExtra::column_spec(2:4, width = "1.5in") 
 
 print(kable_ks_tests)
@@ -754,9 +740,9 @@ The results in Table suggest that the present-day lands experience 2-3 more days
 model.shell <- vector("list",4)
 dep.var <- "heatdays_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 model.shell[[4]] <- glm_clustered(dep.var,df=data_long_m1,family = "poisson")
 
@@ -777,9 +763,9 @@ Table present the results of the analysis of differences in drought across the h
 model.shell <- vector("list",4)
 dep.var <- "drought_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
@@ -799,9 +785,9 @@ Table present the results of the analysis of precipitation across the historical
 model.shell <- vector("list",4)
 dep.var <- "precip"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
@@ -821,9 +807,9 @@ The results in table suggest that present-day lands have higher wildfire hazard 
 model.shell <- vector("list",4)
 dep.var <- "whp"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
@@ -843,9 +829,9 @@ The results in table suggest that the elevation of present-day lands is greater 
 model.shell <- vector("list",4)
 dep.var <- "elevation_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
@@ -866,9 +852,9 @@ The results in table suggest that present-day lands are more rugged than histori
 model.shell <- vector("list",4)
 dep.var <- "tri_mean"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
@@ -889,9 +875,9 @@ The results in Table provide mixed evidence that the percent organic carbon is g
 model.shell <- vector("list",4)
 dep.var <- "SOC_perc"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
@@ -914,9 +900,9 @@ Weighted OLS and Full Weighted OLS models show a significant increase in the lik
 model.shell <- vector("list",3)
 dep.var <- "BasinPortion"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
 sg_table(model.shell,
@@ -936,9 +922,9 @@ We compare annual oil production (measured in thousands of barrels) between hist
 model.shell <- vector("list",3)
 dep.var <- "AllArea_OilPortion"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
 sg_table(model.shell,
@@ -958,9 +944,9 @@ Drawing on the U.S. Department of Agriculture's natural gas production data (mea
 model.shell <- vector("list",3)
 dep.var <- "AllArea_GasPortion"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
 sg_table(model.shell,
@@ -980,9 +966,9 @@ Finally, we study the difference between proximity to federal lands during the h
 model.shell <- vector("list",3)
 dep.var <- "PADPortion"
 
-model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
-model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
-model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
 sg_table(model.shell,

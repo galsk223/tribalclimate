@@ -164,45 +164,45 @@ Table \ref{tab:sum_full} contains summary statistics for the dataset used in the
 
 
 ## Heat
-We construct a metric following Dahl et al.'s measure of the average number of days per year between 1971 to 2000 with a Heat Index greater than 100 degrees Farenheit (Dahl et al. 2019). To do so, we use the daily maximum temperature gridded (4km resolution) across the continental US from gridMET (Abatzoglou, 2013). For each grid cell, we aggregate the number of days in a year that exceed 100 degrees Farenheit. We then aggregate the mean of hot days over all grid cells contained in the polygon (weighted by the area of the cell contained within the boundary), and finally, over the available years of 1979-2000, we use the average number of mean hot days per year across a county or census tribal area in historical and present-day time periods, respectively.
+We construct a metric following Dahl et al.'s measure of the average number of days per year between 1971 to 2000 with a Heat Index greater than 100 degrees Farenheit (Dahl et al. 2019). To do so, we use the daily maximum temperature gridded (4km resolution) across the continental US from gridMET (Abatzoglou, 2013). For each grid cell, we aggregate the number of days in a year that exceed 100 degrees Farenheit. We then aggregate the mean of hot days over all grid cells contained in the polygon (weighted by the area of the cell contained within the boundary), and finally, over the available years of 1979-2000, we use the average number of mean hot days per year for each tribe in historical and present-day time periods.
 
 
 ## Drought
-We measure drought conditions as the Palmer Drought Severity Index (PDSI). The PDSI is a unitless measure which assesses exposure to drought and ranges from -10 (extreme drought) to +10 (extreme wet). We gather weekly PDSI measures gridded (4km resolution) across the continental US from gridMET (Abatzoglou, 2013).  First, we construct weekly PDSI averages using GIS to spatially intersect county or census tribal area boundaries with gridded weather.  Second, we calculate averages of weekly drought in each area from 1980 to 2020. This variable captures the long-term climate impacts on CCEs.
+We measure drought conditions as the Palmer Drought Severity Index (PDSI). The PDSI is a unitless measure which assesses exposure to drought and ranges from -10 (extreme drought) to +10 (extreme wet). We gather weekly PDSI measures gridded (4km resolution) across the continental US from gridMET (Abatzoglou, 2013).  First, we construct weekly PDSI averages using GIS to spatially intersect county or census tribal area boundaries with gridded weather.  Second, we calculate averages of weekly drought for each tribe from 1980 to 2020. This variable captures the long-term climate impacts on tribes.
  
  
 ## Precipitation
-Oregon State University's PRISM Climate Group calculates average precipitation (inches) over 30-year time periods. We use data that is calculated between 1981 and 2010 (PRISM Climate Group, ND). We use a raster with a 4km extent, which we subset to the area of each polygon. The precipitation used for each tribal area is the the mean value found in each cell contained within the boundary, weighted by the amount of grid cell area within the tribal area boundary.
+Oregon State University's PRISM Climate Group calculates average precipitation (inches) over 30-year time periods. We use data that is calculated between 1981 and 2010 (PRISM Climate Group, ND). We use a raster with a 4km extent, which we subset to the area of each polygon. The precipitation used for each tribe is the the mean value found in each cell contained within an area boundary, weighted by the amount of grid cell area within the tribal area boundary.
 
 
 ## Wildfire Hazard Potential
-A changing climate is expected to alter wildfire behavior in the US, and particularly in the Western US (Abazoglou and Williams, 2016; Westerling et al. 2006).  We construct a measure of wildfire risk using a gridded (270 meter) index called Wildfire Hazard Potential (WHP) (Dillon, 2018).  The WHP is a discrete scale from 1 (very low fire hazard potential) to 5 (very high hazard potential) designed to inform fuel planning efforts.  We choose this measure because it synthesizes many ecological, geographic, and atmospheric factors into a single index. We calculate the mean WHP of all grid cells within a county or tribal area boundary.
+A changing climate is expected to alter wildfire behavior in the US, and particularly in the Western US (Abazoglou and Williams, 2016; Westerling et al. 2006).  We construct a measure of wildfire risk using a gridded (270 meter) index called Wildfire Hazard Potential (WHP) (Dillon, 2018).  The WHP is a discrete scale from 1 (very low fire hazard potential) to 5 (very high hazard potential) designed to inform fuel planning efforts.  We choose this measure because it synthesizes many ecological, geographic, and atmospheric factors into a single index. We calculate the mean WHP of all grid cells within all of a tribes counties or census native areas.
 
 
 ## Elevation
-We extract elevation data from an open-source digital elevation model (DEM) accessed via the elevatr package in R (Hollister and Shah, 2017).  The data sources for the package are high resolution gridded elevation estimates from the U.S. Geological Survey’s Global Multi-resolution Terrain Elevation Data 2010 (GMTED2010) and Amazon Web Service's Mapzen Terrain Tiles (U.S. Geological Survey and National Geospatial Intelligence Agency, 2010). The DEM contains elevation in meters at 100 meter resolution across the US.  We calculate the average elevation across all pixels in the county or tribal area to construct a mean elevation.
+We extract elevation data from an open-source digital elevation model (DEM) accessed via the elevatr package in R (Hollister and Shah, 2017).  The data sources for the package are high resolution gridded elevation estimates from the U.S. Geological Survey’s Global Multi-resolution Terrain Elevation Data 2010 (GMTED2010) and Amazon Web Service's Mapzen Terrain Tiles (U.S. Geological Survey and National Geospatial Intelligence Agency, 2010). The DEM contains elevation in meters at 100 meter resolution across the US.  We calculate the average elevation across all pixels in the historical or present-day land area to construct a mean elevation.
 
 
 ## Ruggedness
-We use the ruggedness index also available in the the digital elevation model. We refer to the *raster* package in R (Hijmans, 2020), which states that the Total Ruggedness Index is “... the mean of the absolute differences between the value of a cell [elevation] and the value of its 8 surrounding cells (Wilson et al., 2007).”  The ruggedness is calculated at approximately 100 meter resolution for every county or tribal area.  For each polygon, we extract the mean Total Ruggedness Index for consistency with the tribal boundary data and other measurements in the analysis.
+We use the ruggedness index also available in the the digital elevation model. We refer to the *raster* package in R (Hijmans, 2020), which states that the Total Ruggedness Index is “... the mean of the absolute differences between the value of a cell [elevation] and the value of its 8 surrounding cells (Wilson et al., 2007).”  The ruggedness is calculated at approximately 100 meter resolution for every county or tribal area. For each polygon, we extract the mean Total Ruggedness Index for all of a tribe's lands for consistency with other measurements in the analysis.
 
 
 ## Soil Organic Carbon 
 Ramcharan et. al. (2017) utilize random forest and gradient boosting algorithms to predict soil properties across the United States (Ramcharan et al. 2017), creating a spatially explicit  dataset over the contiguous U.S., gridded at a 100m resolution. We report changes in soil organic carbon (SOC), between historical and present-day lands in this appendix. However, soil health - and proxies for it, such as SOC - is dynamically influenced by the interaction between natural processes and human activities (Stevens, 2018; Haddaway et al 2017). For this reason, the measure itself is not sufficiently durable over time to be an appropriate selection for our primary research design, and is therefore excluded from the manuscript. We include results in the appendix as a starting point for future research which may investigate soil- and agriculture-focused research questions in greater depth.
 
-We follow the data processing technique described by Kane et al. (2020). We first stack the rasters for SOC parts per mil at 5, 15, and 30 cm. Then we intersect the raster stack with the relevant spatial polygons, and for each polygon regress the SOC levels in parts per mil on the depth to derive a linear relationship between depth and SOC. We add the estimated intercept to 15 times the estimated coefficient on depth to get an interpolated value of SOC at 15cm. Finally we divide by 10 to convert to a percentage.
+We follow the data processing technique described by Kane et al. (2020). We first stack the rasters for SOC parts per mil at 5, 15, and 30 cm. Then we intersect the raster stack with the relevant spatial polygons, and for each county or census tribal area regress the SOC levels in parts per mil on the depth to derive a linear relationship between depth and SOC. We add the estimated intercept to 15 times the estimated coefficient on depth to get an interpolated value of SOC at 15cm. Finally we divide by 10 to convert to a percentage, and take the mean across all of a tribes historical or present-day land holdings.
  
  
 ## Oil and Gas Basins
-The U.S. Energy Information Administration provides a map of sedimentary basin boundaries within the continental United States(U.S. Energy Information Administration, n.d.). Using this map, we construct a variable of the portion of land within a tribal area that overlaps an oil or gas basin. 
+The U.S. Energy Information Administration provides a map of sedimentary basin boundaries within the continental United States(U.S. Energy Information Administration, n.d.). Using this map, we construct a variable of the portion of land within tribal land area that overlaps an oil or gas basin. 
 
 
 ## Oil and Gas Production
-The U.S. Geological Survey reports all known well locations across the continental United States between 1859 and 2005. The mapped area is divided into one-quarter square mile grid cells, where cells with wells are coded as either predominantly oil-producing, gas-producing, both oil- and gas-producing, or the wells are dry or their production status is unknown (Biewick, 2008). To create a measure of oil production, we aggregate over the 146-year period the portion of unique land that has at any point been coded as oil-producing or both oil- and gas-producing of a tribal area. We create a corresponding measure of gas production by similarly aggregating the gas-producing and both oil- and gas-producing cells.
+The U.S. Geological Survey reports all known well locations across the continental United States between 1859 and 2005. The mapped area is divided into one-quarter square mile grid cells, where cells with wells are coded as either predominantly oil-producing, gas-producing, both oil- and gas-producing, or the wells are dry or their production status is unknown (Biewick, 2008). To create a measure of oil production, we aggregate over the 146-year period the portion of a tribe's unique land that has at any point been coded as oil-producing or both oil- and gas-producing of a tribal area. We create a corresponding measure of gas production by similarly aggregating the gas-producing and both oil- and gas-producing cells.
 
 
 ## Federal Lands
-The U.S. Geological Survey's Protected Lands Database of the U.S. (PAD-US) is a spatial inventory of all formally protected lands (U.S. Geological Survey (USGS) Gap Analysis Project (GAP), 2018). We select only lands protected by the Federal Government (e.g. national parks, national forests, etc.). We buffer the tribal land to include the land within 100 miles, and find the portion of land federally protected within the buffered polygon.
+The U.S. Geological Survey's Protected Lands Database of the U.S. (PAD-US) is a spatial inventory of all formally protected lands (U.S. Geological Survey (USGS) Gap Analysis Project (GAP), 2018). We select only lands protected by the Federal Government (e.g. national parks, national forests, etc.). We buffer the tribal land to include the land within 161 km (100 miles), and find the portion of land federally protected within the buffered polygon. We take the mean of this portion for the historical counties and present-day census native areas to get a metric for each tribe in each time period.
 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
@@ -537,23 +537,31 @@ final_plot_app
 
 # Methods
 
-We employ several statistical methods to test whether characteristics of the historical lands differ from the present-day lands.  Our primary method to compare the historical and present-day counties and census tribal areas is a linear regression of the land characteristic as a function of a binary indicator for present-day lands (and an intercept), which amounts to simple ANOVA test of whether the means are equal in the historical and present-day land.  The intercept in these models is the mean of the land characteristic in the historical period while the present-day coefficient represents the change from the historical to the present-day period.  All statistical tests are conducted using cluster-robust standard errors, which account for heteroskedasticity and serial correlation that may exist within a tribe and within a tribe's land.  Observations within a tribe may be correlated because of the proximity of census native areas within a tribe's total historical or present-day extent. Tribal lands may also overlap native areas or counties creating correlation within native areas or counties across tribes.  
+To get a sense of the distribution of each tribe's land characteristics in the historical and present-day time periods, we create density plots of each variable (Figure 1). This provides an overview of comparative means and outliers, in addition to a sense of the distributions. Similarly, we run Kolmogorov-Smirnov tests of each variable, comparing the distribution in historical periods and present-day time periods. We repeat these tests for three subsets of the data: (1) for tribes that are present in the data in historical and present-day periods, (2) for all tribes, including those that were only present in historical or present-day periods, and (3) for tribes that are present in the data in historical and present-day periods, disaggregated to census area (CCE in the historical period, and census native area in the present-day). We use the distribution visualization and Kolmogorov-Smirnov tests to provide a qualitative and statistical analysis of the distributions of characteristics in both time periods.
 
-We assess the robustness of our estimate using several alternative model specifications and two forms of the data: 1) only tribes with records in the present-day and historical period, and 2) all tribes including those with records in only one time period (denoted Full in the following tables).  In each table below, we present a set of the following models:
+To complement the analysis of distributions, we employ several statistical methods to test whether the means of characteristics of the historical lands differ from the present-day lands.  Our primary method to compare the historical and present-day counties and census native areas is a linear regression of the land characteristic per tribe and time period as a function of a binary indicator for present-day lands (and an intercept), which amounts to simple ANOVA test of whether the means are equal in the historical and present-day land.  The intercept in these models is the mean of the land characteristic in the historical period while the present-day coefficient represents the change from the historical to the present-day period.  All statistical tests are conducted using cluster-robust standard errors, which account for heteroskedasticity and serial correlation that may exist within a tribe and within a tribe's land.  Observations within a tribe may be correlated because of the proximity of census native areas within a tribe's total historical or present-day extent. Tribal lands may also overlap native areas or counties creating correlation within native areas or counties across tribes.  
+
+We assess the robustness of our estimate using several alternative model specifications.  In each table below, we present a set of the following models:
 
 - OLS: Ordinary Least Squares (OLS) model using only data on tribes with records in the historical and present-day periods.  
 
 - OLS | All Tribes: OLS model using all available data, including observations for tribes that are only found in either historical or present-day periods.
 
 - OLS | Excluding OTSA: OLS model using only data on tribes with records in the historical and present-day periods, excluding tribes whose present-day land is classified as an Oklahoma Tribal Statistical Area.
-
 <!-- - OLS | Only OTSA: OLS model using only data on tribes with records in the historical and present-day periods, limited to tribes whose present-day land is classified as an Oklahoma Tribal Statistical Area. -->
+
+- Poisson: a regression when the dependent variable is an integer (e.g., days).
 
 - Tribe FE: an OLS regression with tribe fixed effects.  The fixed effect regression estimates tribe-specific means in the historical period, but a common coefficient on the difference between the historical and present-day periods.  This model would control for unobserved factors within a tribe that may influence any relocation policy and thus the characteristics of the counties or census native areas in both the historical and present-day periods.  
 
 - BEZI: zero-inflated Beta regression when the dependent variable is bounded between zero and one (e.g., portion).
 
-# KS Test Results
+
+# Distribution Results | KS Tests and Density Plots
+In Table 4, we see that distributions for each land characteristic are statistically different in historical and present-day land. These findings are robust for all subsets of the data (tribes found in both time periods, all tribes, and tribes found in both time periods, dissagregated to census areas). Aside from the D statistic for Soil Organic Carbon, all D-statistics are significant at p < 0.0006 Bonferroni equivalent at alpha = 0.5. 
+
+Looking at the distribution plots in Figure 1, we see the ways in which the distributions differ between time periods. For instance, extreme heat and wildfire risk both have greater means in the present day, with greater density of tribes at higher levels. Similarly, precipitation, elevation, and ruggedness have lower means in the present day, with greater density of tribes at lower levels. We see uncertain effects in drought and soil organic carbon: drought experiences more variation overall, and soil organic carbon seems to have greater density at lower values, with a small group of tribes having much increased levels in the present-day. We also see more tribes with $0$ values of oil and gas basins, oil production, and gas production, though the change is less certain for tribes with some land with available resources or production between periods. Lastly, it is unclear how the distribution of access to federal lands differs from the historical period to now.
+
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 # Precipitation
 ks_precip <- ks.test(df_all_t1$precip,
@@ -748,7 +756,7 @@ This section presents the results of the analysis along with several robustness 
 
 ## Heat
 
-The results in Table suggest that the present-day lands experience 2-3 more days in excess of 100 degrees per year compared to historical lands. All point estimates yield significant increases, ranging from 2.54 [1.6, 3.48] from the Weighted OLS model to 2.92 [1.00, 4.83] from the Full OLS model.  The coefficients of the Poisson model are not directly comparable to the OLS estimates.  The model suggests that historical lands experience about 5.5 (5.5=exp(1.705)) days a year over 100 degrees, while the present-days lands experience 2.6 (2.6=exp(1.71)*(exp(.39)-1)) , additional days over 100, which is comparable to the OLS estimates. 
+The results in Table \ref{tab:heat} suggest that the present-day lands experience 7 more days in excess of 100 degrees per year compared to historical lands. All point estimates yield significant increases, ranging from 6.11 [3.62, 8.6] from the OLS model with all tribes to 7.08 [3.88, 10.27] in the primary OLS model with just tribes in both periods.  The coefficients of the Poisson model are not directly comparable to the OLS estimates. The model suggests that historical lands experience about 1.14 (1.14 = exp(0.13)) days a year over 100 degrees, while the present-days lands experience 7.11 (7.11 = exp(0.13)*(exp(1.98)-1)), additional days over 100, which is comparable to the OLS estimates. 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",4)
@@ -771,7 +779,7 @@ sg_table(model.shell,
 
 ## Drought
 
-Table present the results of the analysis of differences in drought across the historical and present-day lands.  Our variable is the change in drought over time.  The coefficients on historical indicate that even the historical lands are experiencing more drought.  The coefficients on present-day change indicate that present day lands are becoming even drier.  OLS, Weighted OLS, Full OLS, and Tribe Fixed Effects models all indicate that present-day lands are about twice as dry as historical lands, with point estimates ranging between -0.06 (Weighted OLS) and -0.18 (OLS).  
+Table \ref{tab:drought} presents the results of the analysis of differences in drought across the historical and present-day lands. Our variable is the drought in each time, in PDSI.  The coefficients on the intercept indicate that historical lands on average were not in drought.  The coefficients on present-day change do not indicate any robust changes in present-day lands. 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",4)
@@ -793,7 +801,7 @@ sg_table(model.shell,
 
 ## Precipitation
 
-Table present the results of the analysis of precipitation across the historical and present-day lands.   The coefficients on Historical across models range from 899 mm to 994 mm of precipitation each year on historical lands. While the estimates in the unweighted models are statistically insignificant, the weighted models suggest an increase in precipitation of around 58 mm per year (Weighted OLS) or 135 mm per year (Full Weighted OLS).  These results suggest that on average tribes are now in areas with higher precipitation but that larger tribes were relocated to areas with more variable precipitation patterns (insignificant estimates). 
+Table \ref{tab:precip} presents the results of the analysis of precipitation across the historical and present-day lands. The coefficients on Historical across models range from 871.85 mm to 905.79 mm of precipitation each year on historical lands. We see a significant decrease in the precipitation experienced, estimated to be between 177.19 mm less per year, from the OLS model with all tribes, to 259.84 mm less per year, from the fixed effect model. Using the estimates from the primary regression (1), on average tribes experience 24.5% less annual rainfall in present-day lands than they did in historical lands.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",4)
@@ -815,7 +823,7 @@ sg_table(model.shell,
 
 ## Wildfire Hazard Potential
 
-The results in table suggest that present-day lands have higher wildfire hazard potential (WHP) compared to historical lands.  The coefficients on Historical indicate that the historical lands have an average WHP rating of around 1 on a scale of 1 (very low fire hazard potential) to 5 (very high hazard potential). The results indicate that the present-day lands have a higher WHP than the historical lands by 0.55 points on the index, a 47% increase.  This estimate is robust to several alternative specifications, including the Full OLS and Tribe Fixed Effects models. The Full Weighted OLS model is the only specification which estimates a reduction in WHP in the present day. This suggests that tribes with a broader historical spread across many CCE's experienced greater increases in WHP, while tribes with less historical spread across CCE's did not. While wildfire hazard potential is a function of the natural environment, it is also influenced by human modifications of the natural and built environment.  
+The results in Table \ref{tab:whp} suggest that present-day lands have higher wildfire hazard potential (WHP) compared to historical lands.  The coefficients on Historical indicate that the historical lands have an average WHP rating of around 1.37 on a scale of 1 (very low fire hazard potential) to 5 (very high hazard potential). The results indicate that the present-day lands have a higher WHP than the historical lands by 0.4 points on the index, a 29% increase.  This estimate is robust to several alternative specifications, including the OLS model with all tribes, the OLS model excluding OTSA, and the Tribe Fixed Effects model.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",4)
@@ -837,7 +845,7 @@ sg_table(model.shell,
 
 ## Elevation
 
-The results in table suggest that the elevation of present-day lands is greater than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE elevation of 541.46 meters. The results indicate that the present-day lands are an average of 196.43 meters higher than the historical lands, a 36% increase.  While we find similar results with the Full OLS model, the weighted models and Tribe FE model indicate no or a small decrease in elevation. These  results suggests that tribes with a broader historical spread across many CCE's experienced a small decrease in elevation.  The weighted versions of the model compare across tribes rather than the population and extent of the peoples in the tribe.
+The results in Table \ref{tab:elevation} suggest that the elevation of present-day lands is less than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE elevation of 750.56 meters. The results indicate that the present-day lands are an average of 148.10 meters lower than the historical lands, a 19% decrease. We find similar results with the OLS model with all tribes, the model excluding OTSA, and the Tribe FE model.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",4)
@@ -860,7 +868,7 @@ sg_table(model.shell,
 
 ## Ruggedness
 
-The results in table suggest that present-day lands are more rugged than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE ruggedness index of 5.36. The results indicate that the present-day lands have an average ruggedness index 3.14 points higher than the historical lands, a 59% increase.  While we find similar results with the Full OLS model, the weighted models and Tribe FE model indicate no difference between historical and present-day ruggedness. 
+The results in Table \ref{tab:tri} suggest that present-day lands are more less rugged than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE ruggedness index of 10.24. The results indicate that the present-day lands have an average ruggedness index 3.08 points lower than the historical lands, a 30% decrease. This finding is consistent across all model specifications.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",4)
@@ -883,7 +891,7 @@ sg_table(model.shell,
 
 ## Soil Organic Carbon
 
-The results in Table provide mixed evidence that the percent organic carbon is greater in present-day lands compared to historical lands. Our primary OLS model indicates that present-day lands have 8.25 percentage points higher SOC content than historical lands. While the Full OLS model yields similar results in direction and magnitude, both Weighted OLS and Tribe FE models suggest that the magnitude of increase was relatively small and insignificant. The Full Weighted OLS model suggests that SOC levels are lower in the present day. We do not report these results in the manuscript because the measure of organic carbon is not durable over time (see notes in Data Description).
+The results in Table \ref{tab:soc} provide no evidence that the percent organic carbon is different in present-day lands compared to historical lands. Historical lands had a SOC of 3.98, and any decrease suggested by the estimated signs of the coefficients on change are statistically insignificant. We do not report these results in the manuscript because the measure of organic carbon is not durable over time (see notes in Data Description).
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",4)
@@ -906,9 +914,9 @@ sg_table(model.shell,
 
 ## Oil and Gas Basins
 
-We evaluate access to oil and gas based on the likelihood that a tribe's CCEs lie over subsurface oil and gas.  Our main specification, OLS, in Table (column 1) indicates that present-day lands are 11% [0.20, 0.01] less likely to have access to subsurface oil and gas than the baseline historical lands (60% [0.53, 0.66]). Estimating OLS with a binary dependent variable is known as a linear probability model (LPM).  The LPM has two well-known shortcomings: 1) bias when the mass of the distribution lies outside of the unit interval, and 2) heteroskedasticity.  Since we estimate all models with robust standard errors, we correct for heteroskedasticity.  We estimate a logistic regression (column 5) to assess the robustness of the difference between present-day and historical lands.  The results of the logistic regression indicate that present-day lands have less access to oil and gas supporting the results of our main specification.  
+We evaluate access to oil and gas based on the likelihood that a tribe's CCEs lie over subsurface oil and gas. We estimate decreases in access to subsurface oil and gas in Table \ref{tab:og_basins_ols}, with a decrease of 4% [-0.08,0.0001] in the primary model, and 5% [-0.09,-0.02] in the model excluding OTSA land. Estimating OLS with a binary dependent variable is known as a linear probability model (LPM).  The LPM has two well-known shortcomings: 1) bias when the mass of the distribution lies outside of the unit interval, and 2) heteroskedasticity.  Since we estimate all models with robust standard errors, we correct for heteroskedasticity.  
 
-Weighted OLS and Full Weighted OLS models show a significant increase in the likelihood for present-day lands to have access to oil and gas reserves. In contrast, the unweighted model results suggests that tribes with larger historical lands experienced reductions in oil and gas access. This result, again, highlights the variation across tribes in the dataset.
+We estimate a zero inflated beta regression (Table \ref{tab:bezi}) to assess the robustness of the difference between present-day and historical lands. The positive estimated present-day change of the Nu Function suggests that tribes are more likely to have no access to subsurface oil and gas. However the positive estimated present-day change of the Mu function indicates that for tribes that are to have some access to subsurface oil and gas, they are likely to have more in present-day.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",3)
@@ -930,7 +938,9 @@ sg_table(model.shell,
 
 ## Oil Production
 
-We compare annual oil production (measured in thousands of barrels) between historical and present-day lands, with model specifications providing some evidence that there is less oil production on present-day CCEs . While our primary OLS specification shows a statistically insignificant reduction in oil production (123 thousand barrels), additional model specifications show significant reductions.  When the full dataset is included, the average oil production of present-day CCEs falls by 334 thousand barrels per year, a 50% reduction from the average across the historical CCEs (783 thousand barrels).
+We compare the portion of land used in oil production between historical and present-day lands in Table \ref{tab:og_oil_ols}, with model specifications providing little evidence that there is change in oil production on present-day land. We see a significant decrease only in the model excluding OTSA of -0.01 [-0.02,-0.002] in production. 
+
+Table \ref{tab:bezi} provides greater granularity on the change in oil production, with tribe land being more likely to not have any oil production (positive Mu Change) and also a greater amount of oil production if a land is to have any oil production (positive Nu Change).
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",3)
@@ -952,7 +962,9 @@ sg_table(model.shell,
 
 ## Gas Production
 
-Drawing on the U.S. Department of Agriculture's natural gas production data (measured in billion cubic feet), we compare gas production between historical and present-day lands.  Our estimates indicate that gas production increased by 4.29 billion cubic feet per year in present-day CCEs up from 6.1 billion cubic feet on the historical CCEs.  However, these results do not seem to be robust across specifications.  Additional model specification yield mixed results. The Weighted, Full Weighted OLS, and Tribe Fixed Effects models show insignificant changes in gas production between time periods. 
+We compare the portion of land used in gas production between historical and present-day lands in Table \ref{tab:og_gas_ols}, with model specifications providing little evidence that there is change in gas production on present-day land. We see a significant decrease only in the model excluding OTSA of -0.02 [-0.03,-0.005] in production. 
+
+Table \ref{tab:bezi} provides greater granularity on the change in oil production, with tribe land being more likely to not have any oil production (positive Mu Change) and also a greater amount of oil production if a land is to have any oil production (positive Nu Change).
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",3)
@@ -974,7 +986,9 @@ sg_table(model.shell,
 
 ## Federal Lands
 
-Finally, we study the difference between proximity to federal lands during the historical and present-day periods.  We estimate two types of models on the two datasets.  The first model is a Zero-Inflated Beta model designed to analyze data bounded by 0 and 1. The zero-inflated version of the model accounts for the over abundance of zeros.  The results suggest that present-day lands are closer to federal lands compared to historical lands.  The BEZI and Full BEZI coefficient estimates on Present-day Change is 0.51 and 0.52, which implies that the odds of being in proximity to federal lands in the present-day period are 1.65 higher than in the historial period.  The OLS estimates suggest that the present-day CCEs are about 11% more likely to be near federal lands.  
+Finally, we study the difference between proximity to federal lands during the historical and present-day periods. We estimate a consistent change across specifications of 0.01 (Table \ref{tab:pad_ols}), indicating that present-day lands have more federal land within 161 km of the area boundary.
+
+We estimate two additional models on the datasets in Table \ref{tab:bezi}. In both the BEZI and logit models, we do not find a significant difference between the amount of federal lands within historical and present land boundaries.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
 model.shell <- vector("list",3)

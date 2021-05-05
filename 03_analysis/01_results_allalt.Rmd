@@ -1,0 +1,461 @@
+---
+title: "Appendix A: Results"
+author: ""
+#date: "`r format(Sys.time(), '%B %d, %Y')`"
+header-includes:
+   - \usepackage{rotating, graphicx}
+   - \usepackage[printfigures]{figcaps}
+output: pdf_document
+---
+
+```{r setup, include = FALSE}
+
+knitr::opts_chunk$set(echo = TRUE)
+options(scipen=999)
+
+
+```
+
+```{r project_setup, message = FALSE, warning = FALSE, include=FALSE}
+rm(list = ls())
+library(tidyverse)
+library(knitr)
+library(scales)
+library(broom)
+library(MASS)
+library(pscl)
+library(boot)
+library(nlme)
+library(cplm)
+library(conflicted)
+library(fixest)
+library(stargazer)
+library(clubSandwich)
+library(srvyr)
+library(survey)
+library(janitor)
+library(ggridges)
+library(cowplot)
+
+conflict_prefer("filter", "dplyr")
+conflict_prefer("select", "dplyr")
+
+source("support_functions.R")
+load("old_appendix/final_data.Rdata")
+
+#######################
+#Load data
+t1 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
+  filter(time == "time 1") %>% 
+  select(tribe,GEOID = fips, rt) %>% 
+  unique() 
+
+t2 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
+  filter(time == "time 2") %>% 
+  select(tribe,UID = census_tribe, rt) %>% 
+  mutate(UID = str_extract(UID,"\\d+")) %>% 
+  unique() %>% 
+  filter(!is.na(UID),
+         !rt %in% c("tribalsub","sdtsa","tdsa"))
+
+df1 <- read_csv("../01_data/clean/00_all_countypolygons.csv") %>% 
+  select(-tribe) %>% 
+  unique() %>% 
+  left_join(t1,.,by=c("GEOID")) %>% 
+  mutate(time = "time 1",
+         SOC_perc = SOC_mean/10)
+df2 <- read_csv("../01_data/clean/00_all_newpolygons.csv") %>% 
+  inner_join(.,t2,by="UID") %>% 
+  select(tribe, everything()) %>% 
+  mutate(time = "time 2") 
+
+data_long_bytribe <- bind_rows(df1,df2) %>% 
+  select(tribe,GEOID,UID,time,everything()) %>% 
+  filter(!is.na(tribe)) %>% 
+  mutate(tribe = factor(tribe),
+         time = factor(time),
+         whp = ifelse(is.na(whp),whp_mean,whp)) 
+
+data_t1and2_long_bytribe <- filter(data_long_bytribe, 
+                                   tribe %in%tribes_time1and2_lst$tribe) 
+
+#Constructing weights and survey objects
+data_long_m1_full <- data_long_bytribe %>%
+  group_by(tribe,time) %>%
+  summarise(wgt=1/n()) %>%
+  ungroup() %>%
+  left_join(data_long_bytribe,
+            .,
+            by=c("tribe","time")) %>% 
+  group_by(time, tribe) %>% 
+  summarise(across(c(heatdays_mean,drought_mean,precip,
+                         whp,elevation_mean,tri_mean,SOC_perc,
+                         BasinPortion,AllArea_OilPortion,
+                         AllArea_GasPortion,PADPortion), ~ mean(.x, na.rm = TRUE))) %>% 
+  ungroup()
+
+data_long_m1 <- data_t1and2_long_bytribe %>%
+  group_by(tribe,time) %>%
+  summarise(wgt=1/n()) %>%
+  ungroup() %>%
+  left_join(data_t1and2_long_bytribe,
+            .,
+            by=c("tribe","time")) %>% 
+  group_by(time, tribe) %>% 
+  summarise(across(c(heatdays_mean,drought_mean,precip,
+                         whp,elevation_mean,tri_mean,SOC_perc,
+                         BasinPortion,AllArea_OilPortion,
+                         AllArea_GasPortion,PADPortion), ~ mean(.x, na.rm = TRUE))) %>% 
+  ungroup() 
+
+# t <- data_long_m1 %>% 
+#   group_by(time) %>% 
+#   summarise(Mean_PAD = mean(PADPortion, na.rm = T),
+#             Mean_Oil = mean(AllArea_OilPortion, na.rm = T),
+#             Mean_Gas = mean(AllArea_GasPortion, na.rm = T),
+#             Mean_Basin = mean(BasinPortion, na.rm = T)) %>% 
+#   ungroup()
+# 
+# tp <- data_long_m1 %>% 
+#   select(time,PADPortion,AllArea_OilPortion,AllArea_GasPortion,BasinPortion) %>% 
+#   pivot_longer(-time)
+#   
+# p <- ggplot(tp, aes(x = value, fill = time)) +
+#   geom_histogram(alpha = 0.4, binwidth = 0.1, position = 'identity') +
+#   facet_wrap(~ name) +
+#   ggthemes::theme_tufte()
+# 
+# p
+
+# write_rds(data_long_m1,"data_long.rds")
+# write_rds(data_long_m1_full,"data_long_all.rds")
+
+data_long_m2_noOK <- df_subset(c("air_federal","air_state"))
+data_long_m3_OK <- df_subset(c("otsa"))
+
+# subset to T1 and T2
+df_all_t1 <- filter(data_long_m1_full, time == "time 1")
+df_all_t2 <- filter(data_long_m1_full, time == "time 2")
+
+df_t1 <- filter(data_long_m1, time == "time 1")
+df_t2 <- filter(data_long_m1, time == "time 2")
+
+df_t1_bytribe <- filter(data_t1and2_long_bytribe, time == "time 1")
+df_t2_bytribe <- filter(data_t1and2_long_bytribe, time == "time 2")
+
+# disappearing tribes 
+df2_int1 <- df2 %>% 
+  filter(tribe %in% df1$tribe)
+
+df2_filledt1 <- left_join(df1 %>% select(tribe, time) %>% unique(),
+                          df2 %>% select(tribe, time) %>% unique(), by = "tribe") %>% 
+  filter(is.na(time.y)) %>% 
+  select(tribe) %>% 
+  mutate(time = "time 2",
+         heatdays_mean = 0,
+         drought_mean = 0,
+         precip = 0,
+         whp = 0,
+         elevation_mean = 0,
+         tri_mean = 0,
+         SOC_perc = 0,
+         BasinPortion = 0,
+         AllArea_OilPortion = 0,
+         AllArea_GasPortion = 0,
+         PADPortion = 0) %>% 
+  bind_rows(., df2_int1)
+
+data_long_m4_filledmissing <- bind_rows(df1,df2_filledt1) %>% 
+  select(tribe,GEOID,UID,time,everything()) %>% 
+  filter(!is.na(tribe)) %>% 
+  mutate(tribe = factor(tribe),
+         time = factor(time),
+         whp = ifelse(is.na(whp),whp_mean,whp)) %>% 
+  group_by(time, tribe) %>% 
+  summarise(across(c(heatdays_mean,drought_mean,precip,
+                         whp,elevation_mean,tri_mean,SOC_perc,
+                         BasinPortion,AllArea_OilPortion,
+                         AllArea_GasPortion,PADPortion), ~ mean(.x, na.rm = TRUE))) %>% 
+  ungroup()
+
+
+df1_int2 <- df1 %>% 
+  filter(tribe %in% df2$tribe)
+
+df1_filledt2 <- left_join(df2 %>% select(tribe, time) %>% unique(),
+                          df1 %>% select(tribe, time) %>% unique(), by = "tribe") %>% 
+  filter(is.na(time.y)) %>% 
+  select(tribe) %>% 
+  mutate(time = "time 1",
+         heatdays_mean = 0,
+         drought_mean = 0,
+         precip = 0,
+         whp = 0,
+         elevation_mean = 0,
+         tri_mean = 0,
+         SOC_perc = 0,
+         BasinPortion = 0,
+         AllArea_OilPortion = 0,
+         AllArea_GasPortion = 0,
+         PADPortion = 0) %>% 
+  bind_rows(., df1_int2)
+
+data_long_m4_fillednew <- bind_rows(df1_filledt2,df2) %>% 
+  select(tribe,GEOID,UID,time,everything()) %>% 
+  filter(!is.na(tribe)) %>% 
+  mutate(tribe = factor(tribe),
+         time = factor(time),
+         whp = ifelse(is.na(whp),whp_mean,whp)) %>% 
+  group_by(time, tribe) %>% 
+  summarise(across(c(heatdays_mean,drought_mean,precip,
+                         whp,elevation_mean,tri_mean,SOC_perc,
+                         BasinPortion,AllArea_OilPortion,
+                         AllArea_GasPortion,PADPortion), ~ mean(.x, na.rm = TRUE))) %>% 
+  ungroup()
+```
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "heatdays_mean"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Days per Year in excess of 100 degrees F",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         label = "tab:heat",
+         title = "Extreme Heat")
+
+```
+
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "drought_mean"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Mean PDSI",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         label = "tab:drought",
+         title = "Drought")
+```
+
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "precip"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Mean Annual Precipitation",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         label = "tab:precip",
+         title = "Precipitation")
+```
+
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "whp"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Mean Wildfire Hazard Potential",
+         label = "tab:whp",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         title = "Wildfire Hazard Potential")
+```
+
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "elevation_mean"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Elevation",
+         label = "tab:elevation",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         title = "Elevation (meters)")
+```
+
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "tri_mean"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Ruggedness",
+         label = "tab:tri",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         title = "Total Ruggedness Index")
+```
+
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "SOC_perc"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Soil Organic Carbon",
+         label = "tab:soc",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         title = "Soil Organic Carbon")
+```
+
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "BasinPortion"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Portion Land With Subsurface Oil and Gas",
+         label = "tab:og_basins_ols",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         title = "Oil and Gas Basins")
+```
+
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "AllArea_OilPortion"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Portion Land Used in Oil Production",
+         label = "tab:og_oil_ols",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         title = "Oil Production")
+```
+
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "AllArea_GasPortion"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Portion Land Used in Oil Production",
+         label = "tab:og_gas_ols",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         title = "Gas Production")
+```
+
+
+```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
+model.shell <- vector("list",5)
+dep.var <- "PADPortion"
+
+model.shell[[1]] <- ols_robust(dep.var,df=data_long_m1)
+model.shell[[2]] <- ols_robust(dep.var,df=data_long_m1_full)
+model.shell[[3]] <- ols_robust(dep.var,df=data_long_m2_noOK)
+model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m4_filledmissing,clust.var = c("tribe"))
+model.shell[[5]] <- ols_clustered(dep.var,df=data_long_m4_fillednew,clust.var = c("tribe"))
+
+sg_table(model.shell,
+         dep.name = "Proximity to Federal Lands",
+         label = "tab:pad_ols",
+         column.labels = c("OLS Robust SE",
+                           "\\shortstack{OLS Robust SE \\\\ All Tribes}",
+                           "\\shortstack{OLS Robust SE \\\\ Excluding OTSA}",
+                           "\\shortstack{OLS | Filled \\\\ Disappeared Tribes}",
+                           "\\shortstack{OLS | Filled \\\\ New Tribes}"),
+         title = "Federal Lands")
+```
+
+
+
+

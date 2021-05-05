@@ -192,6 +192,20 @@ ols_clustered <- function(dep.var,df,clust.var){
   return(list(results=model.out,obs=obs))
 }
 
+
+ols_robust <- function(dep.var,df,clust.var){
+  require(broom)
+  m.temp <- lm(formula(str_c(dep.var, " ~ time")),
+                  data = df) 
+  
+  model.out <- fixest_to_coeftest(m.temp,df,clust.var)
+  
+  obs <- nobs(m.temp)
+  
+  
+  return(list(results=model.out,obs=obs))
+}
+
 #dep.var <- "precip"
 #df <- svy_data_t1andt2_long
 ols_weighted <- function(dep.var,df){
@@ -269,7 +283,9 @@ sg_table <- function(model.shell,dep.name,...){
             #title = "Extent of Area Occupied",
             add.lines = list(c("Obs",comma(map_dbl(model.shell,"obs")))),
             # float.env = "sidewaystable",
-            notes = c("95\\% confidence intervals in parentheses based on clustered standard errors (tribe)."),
+            notes = c("0.0005952381 is the Bonferroni adjustment to alpha of 0.05.",
+                      "95\\% confidence intervals in parentheses, based on",
+                      "clustered standard errors (tribe)."),
             notes.align = "l",
             header = F,
             star.char = c("*","**","***"),

@@ -252,7 +252,7 @@ stargazer(for_summary[[2]],
 
 ```
 
-```{r, message = FALSE, warning = FALSE, echo = FALSE,fig.cap = "Density of Variables"}
+```{r, message = FALSE, warning = FALSE, echo = FALSE,fig.cap = "Density of Variables", fig.height=8}
 df_plot <- data_long_m1 %>% # only tribes with T1 and T2
   mutate(heatdays_mean_log = log(heatdays_mean + 1)) %>%
   dplyr::select(tribe, time, 
@@ -286,7 +286,7 @@ heat_plot <- ggplot(data = subset(df_plot, variable == "Log Days over 100F"),
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
                       position = position_points_jitter(height=.000, yoffset= -.00),
                       alpha=.5,show.legend = T) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -305,7 +305,7 @@ fire_plot <- ggplot(data = subset(df_plot, variable == "Wildfire Hazard Potentia
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
                       position = position_points_jitter(height = .000, yoffset= -.00),
                       alpha=.5,show.legend = T) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -325,7 +325,7 @@ og_plot <- ggplot(data = subset(df_plot, variable == "Oil and Gas Basin"),
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
                       position = position_points_jitter(height=.00, yoffset= -.0),
                       alpha=.5,show.legend = T) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -343,9 +343,9 @@ precip_plot <- ggplot(data = subset(df_plot, variable == "Precipitation"),
   geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
                       point_shape = "|", point_size = 3, size = 0.65,
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
-                      position = position_points_jitter(height = .00, yoffset= .06),
+                      position = position_points_jitter(height = .00, yoffset= .02),
                       alpha=.5,show.legend = T, na.rm = TRUE) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -361,9 +361,9 @@ drought_plot <- ggplot(data = subset(df_plot, variable == "Drought"),
   geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
                       point_shape = "|", point_size = 3, size = 0.65,
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
-                      position = position_points_jitter(height = .011, yoffset= 1.2),
+                      position = position_points_jitter(height = .011, yoffset= .6),
                       alpha=.5,show.legend = T, na.rm = TRUE) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -380,9 +380,9 @@ elevation_plot <- ggplot(data = subset(df_plot, variable == "Elevation"),
   geom_density_ridges(jittered_points = TRUE, scale = .95, rel_min_height = .01,
                       point_shape = "|", point_size = 3, size = 0.65,
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
-                      position = position_points_jitter(height = .00, yoffset= .05),
+                      position = position_points_jitter(height = .00, yoffset= .02),
                       alpha=.5,show.legend = T, na.rm = TRUE) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -401,7 +401,7 @@ ruggedness_plot <- ggplot(data = subset(df_plot, variable == "Ruggedness"),
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
                       position = position_points_jitter(height = .000, yoffset= -.000),
                       alpha=.5,show.legend = T, na.rm = TRUE) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -421,7 +421,7 @@ soc_plot <- ggplot(data = subset(df_plot, variable == "Soil Organic Carbon"),
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
                       position = position_points_jitter(height = .000, yoffset= -.00),
                       alpha=.5,show.legend = T, na.rm = TRUE) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -441,7 +441,7 @@ fed_plot <- ggplot(data = subset(df_plot, variable == "Fraction Federal Land"),
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
                       position = position_points_jitter(height = .00, yoffset= -.0),
                       alpha=.5,show.legend = T, na.rm = TRUE) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -461,7 +461,7 @@ oil_plot <- ggplot(data = subset(df_plot, variable == "Oil Production"),
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
                       position = position_points_jitter(height = .011, yoffset= -.00),
                       alpha=.5,show.legend = T, na.rm = TRUE) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -481,7 +481,7 @@ gas_plot <- ggplot(data = subset(df_plot, variable == "Gas Production"),
                       quantile_lines=TRUE, quantile_fun=function(x,...)mean(x),
                       position = position_points_jitter(height = .011, yoffset= -.00),
                       alpha=.5,show.legend = T, na.rm = TRUE) +
-  theme_minimal(base_size = 15) +
+  theme_minimal(base_size = 10) +
   theme(legend.position = "bottom", axis.title.y=element_text(family="Helvetica", size=10), 
         axis.title.x=element_text(family="Helvetica", size=12, face="bold"),
         axis.text.x= element_text(family="Helvetica", size=10),
@@ -534,11 +534,11 @@ We assess the robustness of our estimate using several alternative model specifi
 
 - OLS | Excluding OTSA: OLS model using only data on tribes with records in the historical and present-day periods, excluding tribes whose present-day land is classified as an Oklahoma Tribal Statistical Area.
 
-- OLS | Only OTSA: OLS model using only data on tribes with records in the historical and present-day periods, limited to tribes whose present-day land is classified as an Oklahoma Tribal Statistical Area.
+<!-- - OLS | Only OTSA: OLS model using only data on tribes with records in the historical and present-day periods, limited to tribes whose present-day land is classified as an Oklahoma Tribal Statistical Area. -->
 
 - Tribe FE: an OLS regression with tribe fixed effects.  The fixed effect regression estimates tribe-specific means in the historical period, but a common coefficient on the difference between the historical and present-day periods.  This model would control for unobserved factors within a tribe that may influence any relocation policy and thus the characteristics of the counties or census native areas in both the historical and present-day periods.  
 
-- Quasi-Binomial: a generalized linear model using a "logit" link function. These models are used for dependent variables bounded between 0 and 1 and with many 0 observations, in this case for the models estimating the portion of types of land. 
+- BEZI: zero-inflated Beta regression when the dependent variable is bounded between zero and one (e.g., portion).
 
 # KS Test Results
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
@@ -737,18 +737,18 @@ This section presents the results of the analysis along with several robustness 
 The results in Table suggest that the present-day lands experience 2-3 more days in excess of 100 degrees per year compared to historical lands. All point estimates yield significant increases, ranging from 2.54 [1.6, 3.48] from the Weighted OLS model to 2.92 [1.00, 4.83] from the Full OLS model.  The coefficients of the Poisson model are not directly comparable to the OLS estimates.  The model suggests that historical lands experience about 5.5 (5.5=exp(1.705)) days a year over 100 degrees, while the present-days lands experience 2.6 (2.6=exp(1.71)*(exp(.39)-1)) , additional days over 100, which is comparable to the OLS estimates. 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",5)
+model.shell <- vector("list",4)
 dep.var <- "heatdays_mean"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
-model.shell[[5]] <- glm_clustered(dep.var,df=data_long_m1,family = "poisson")
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[4]] <- glm_clustered(dep.var,df=data_long_m1,family = "poisson")
 
 sg_table(model.shell,
          dep.name = "Days per Year in excess of 100 degrees F",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Poisson"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","Poisson"),
          label = "tab:heat",
          title = "Extreme Heat")
 
@@ -760,18 +760,18 @@ sg_table(model.shell,
 Table present the results of the analysis of differences in drought across the historical and present-day lands.  Our variable is the change in drought over time.  The coefficients on historical indicate that even the historical lands are experiencing more drought.  The coefficients on present-day change indicate that present day lands are becoming even drier.  OLS, Weighted OLS, Full OLS, and Tribe Fixed Effects models all indicate that present-day lands are about twice as dry as historical lands, with point estimates ranging between -0.06 (Weighted OLS) and -0.18 (OLS).  
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",5)
+model.shell <- vector("list",4)
 dep.var <- "drought_mean"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
-model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Mean PDSI",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","Tribe FE"),
          label = "tab:drought",
          title = "Drought")
 ```
@@ -782,18 +782,18 @@ sg_table(model.shell,
 Table present the results of the analysis of precipitation across the historical and present-day lands.   The coefficients on Historical across models range from 899 mm to 994 mm of precipitation each year on historical lands. While the estimates in the unweighted models are statistically insignificant, the weighted models suggest an increase in precipitation of around 58 mm per year (Weighted OLS) or 135 mm per year (Full Weighted OLS).  These results suggest that on average tribes are now in areas with higher precipitation but that larger tribes were relocated to areas with more variable precipitation patterns (insignificant estimates). 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",5)
+model.shell <- vector("list",4)
 dep.var <- "precip"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
-model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Mean Annual Precipitation",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","Tribe FE"),
          label = "tab:precip",
          title = "Precipitation")
 ```
@@ -804,19 +804,19 @@ sg_table(model.shell,
 The results in table suggest that present-day lands have higher wildfire hazard potential (WHP) compared to historical lands.  The coefficients on Historical indicate that the historical lands have an average WHP rating of around 1 on a scale of 1 (very low fire hazard potential) to 5 (very high hazard potential). The results indicate that the present-day lands have a higher WHP than the historical lands by 0.55 points on the index, a 47% increase.  This estimate is robust to several alternative specifications, including the Full OLS and Tribe Fixed Effects models. The Full Weighted OLS model is the only specification which estimates a reduction in WHP in the present day. This suggests that tribes with a broader historical spread across many CCE's experienced greater increases in WHP, while tribes with less historical spread across CCE's did not. While wildfire hazard potential is a function of the natural environment, it is also influenced by human modifications of the natural and built environment.  
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",5)
+model.shell <- vector("list",4)
 dep.var <- "whp"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
-model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Mean Wildfire Hazard Potential",
          label = "tab:whp",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","Tribe FE"),
          title = "Wildfire Hazard Potential")
 ```
 
@@ -826,19 +826,19 @@ sg_table(model.shell,
 The results in table suggest that the elevation of present-day lands is greater than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE elevation of 541.46 meters. The results indicate that the present-day lands are an average of 196.43 meters higher than the historical lands, a 36% increase.  While we find similar results with the Full OLS model, the weighted models and Tribe FE model indicate no or a small decrease in elevation. These  results suggests that tribes with a broader historical spread across many CCE's experienced a small decrease in elevation.  The weighted versions of the model compare across tribes rather than the population and extent of the peoples in the tribe.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",5)
+model.shell <- vector("list",4)
 dep.var <- "elevation_mean"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
-model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Elevation",
          label = "tab:elevation",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","Tribe FE"),
          title = "Elevation (meters)")
 ```
 
@@ -849,19 +849,19 @@ sg_table(model.shell,
 The results in table suggest that present-day lands are more rugged than historical lands.  The coefficients on Historical indicate that the historical lands have an average CCE ruggedness index of 5.36. The results indicate that the present-day lands have an average ruggedness index 3.14 points higher than the historical lands, a 59% increase.  While we find similar results with the Full OLS model, the weighted models and Tribe FE model indicate no difference between historical and present-day ruggedness. 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",5)
+model.shell <- vector("list",4)
 dep.var <- "tri_mean"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
-model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Ruggedness",
          label = "tab:tri",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","Tribe FE"),
          title = "Total Ruggedness Index")
 ```
 
@@ -872,19 +872,19 @@ sg_table(model.shell,
 The results in Table provide mixed evidence that the percent organic carbon is greater in present-day lands compared to historical lands. Our primary OLS model indicates that present-day lands have 8.25 percentage points higher SOC content than historical lands. While the Full OLS model yields similar results in direction and magnitude, both Weighted OLS and Tribe FE models suggest that the magnitude of increase was relatively small and insignificant. The Full Weighted OLS model suggests that SOC levels are lower in the present day. We do not report these results in the manuscript because the measure of organic carbon is not durable over time (see notes in Data Description).
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",5)
+model.shell <- vector("list",4)
 dep.var <- "SOC_perc"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
-model.shell[[5]] <- feols_clustered(dep.var,df=data_long_m1)
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+model.shell[[4]] <- feols_clustered(dep.var,df=data_long_m1)
 
 sg_table(model.shell,
          dep.name = "Soil Organic Carbon",
          label = "tab:soc",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","Tribe FE"),
          title = "Soil Organic Carbon")
 ```
 
@@ -897,18 +897,18 @@ We evaluate access to oil and gas based on the likelihood that a tribe's CCEs li
 Weighted OLS and Full Weighted OLS models show a significant increase in the likelihood for present-day lands to have access to oil and gas reserves. In contrast, the unweighted model results suggests that tribes with larger historical lands experienced reductions in oil and gas access. This result, again, highlights the variation across tribes in the dataset.
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",4)
+model.shell <- vector("list",3)
 dep.var <- "BasinPortion"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
 sg_table(model.shell,
          dep.name = "Portion Land With Subsurface Oil and Gas",
          label = "tab:og_basins_ols",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}"),
          title = "Oil and Gas Basins")
 ```
 
@@ -919,18 +919,18 @@ sg_table(model.shell,
 We compare annual oil production (measured in thousands of barrels) between historical and present-day lands, with model specifications providing some evidence that there is less oil production on present-day CCEs . While our primary OLS specification shows a statistically insignificant reduction in oil production (123 thousand barrels), additional model specifications show significant reductions.  When the full dataset is included, the average oil production of present-day CCEs falls by 334 thousand barrels per year, a 50% reduction from the average across the historical CCEs (783 thousand barrels).
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",4)
+model.shell <- vector("list",3)
 dep.var <- "AllArea_OilPortion"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
 sg_table(model.shell,
          dep.name = "Portion Land Used in Oil Production",
          label = "tab:og_oil_ols",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}"),
          title = "Oil Production")
 ```
 
@@ -941,18 +941,18 @@ sg_table(model.shell,
 Drawing on the U.S. Department of Agriculture's natural gas production data (measured in billion cubic feet), we compare gas production between historical and present-day lands.  Our estimates indicate that gas production increased by 4.29 billion cubic feet per year in present-day CCEs up from 6.1 billion cubic feet on the historical CCEs.  However, these results do not seem to be robust across specifications.  Additional model specification yield mixed results. The Weighted, Full Weighted OLS, and Tribe Fixed Effects models show insignificant changes in gas production between time periods. 
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",4)
+model.shell <- vector("list",3)
 dep.var <- "AllArea_GasPortion"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
 sg_table(model.shell,
          dep.name = "Portion Land Used in Oil Production",
          label = "tab:og_gas_ols",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}"),
          title = "Gas Production")
 ```
 
@@ -963,18 +963,18 @@ sg_table(model.shell,
 Finally, we study the difference between proximity to federal lands during the historical and present-day periods.  We estimate two types of models on the two datasets.  The first model is a Zero-Inflated Beta model designed to analyze data bounded by 0 and 1. The zero-inflated version of the model accounts for the over abundance of zeros.  The results suggest that present-day lands are closer to federal lands compared to historical lands.  The BEZI and Full BEZI coefficient estimates on Present-day Change is 0.51 and 0.52, which implies that the odds of being in proximity to federal lands in the present-day period are 1.65 higher than in the historial period.  The OLS estimates suggest that the present-day CCEs are about 11% more likely to be near federal lands.  
 
 ```{r, message = FALSE, warning = FALSE, echo = FALSE, results='asis'}
-model.shell <- vector("list",4)
+model.shell <- vector("list",3)
 dep.var <- "PADPortion"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
-model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
+# model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
 
 sg_table(model.shell,
          dep.name = "Proximity to Federal Lands",
          label = "tab:pad_ols",
-         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}","\\shortstack{OLS \\\\ Only OTSA}","Tribe FE"),
+         column.labels = c("OLS","\\shortstack{OLS \\\\ All Tribes}","\\shortstack{OLS \\\\ Excluding OTSA}"),
          title = "Federal Lands")
 ```
 

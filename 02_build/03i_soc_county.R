@@ -15,9 +15,9 @@ tribeuse <- tribecounties %>%
   filter(!GEOID %in% empty$GEOID) %>% 
   mutate(State = str_sub(GEOID,1,2))
 
-states <- tigris::states(class = "sf") %>% 
-  dplyr::select(STATEFP) %>% 
-  st_transform(crs(sall))
+# states <- tigris::states(class = "sf") %>% 
+#   dplyr::select(STATEFP) %>% 
+#   st_transform(crs(sall))
 
 # from https://scholarsphere.psu.edu/resources/ea4b6c45-9eba-4b89-aba6-ff7246880fb1
 #  described https://github.com/aramcharan/US_SoilGrids100m
@@ -29,7 +29,7 @@ s030 <- raster("01_data/sl4.tif")
 sall <- stack(c(s000,s005,s015,s030))
 
 todo <- setdiff(1:nrow(tribeuse),
-                str_extract(list.files("01_data/cache/soc_county"),"\\d+")) %>% 
+                str_extract(list.files("01_data/cache/soc_county2"),"\\d+")) %>% 
   as.numeric()
 
 n <- todo[1]
@@ -65,10 +65,10 @@ soc <- map(todo,function(n){
              valueweighted2 = valueaggregated2*weight,) %>% 
       summarise(Equal_5_15_30 = sum(valueweighted2, na.rm = T)) %>% 
       mutate(GEOID = tribeuse$GEOID[n],
-             Interpolated_15 = r$coefficients[1]-r$coefficients[2]*15) %>% 
+             Interpolated_15 = r$coefficients[1]+r$coefficients[2]*15) %>% 
       dplyr::select(GEOID,everything())
     
-    write_rds(e1dt,paste0("01_data/cache/soc_county/",n,".rds"))
+    write_rds(e1dt,paste0("01_data/cache/soc_county2/",n,".rds"))
     
     print(paste0(n," - ",Sys.time()))
     return(e1dt)

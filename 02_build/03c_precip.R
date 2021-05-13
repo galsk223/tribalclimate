@@ -32,7 +32,7 @@ precip <- map2_dfr(extracted,tribedf$UID,function(e1,UID){
       .[, c("precip","UID") :=
           .(value*weight,UID)] %>% 
       group_by(UID) %>% 
-      summarise(precip = sum(precip)) %>% 
+      summarise(precip = sum(precip, na.rm = T)) %>% 
       ungroup()
     
   } 
@@ -41,9 +41,9 @@ precip <- map2_dfr(extracted,tribedf$UID,function(e1,UID){
 precipout <- precip %>% 
   left_join(tribedf,.,by="UID") %>% 
   st_set_geometry(NULL) %>% 
-  mutate(precipweight = precip*area_weighted) %>% 
+  mutate(precipweight = precip*area_weighted, na.rm = T) %>% 
   group_by(UID) %>% 
-  summarise(precip = mean(precipweight)) %>% 
+  summarise(precip = mean(precipweight, na.rm = T)) %>% 
   ungroup()
 
 write_rds(precipout,"01_data/clean/c_precip.rds")

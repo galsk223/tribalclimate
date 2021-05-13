@@ -92,7 +92,7 @@ var.cbsa <- inner_join(bridge.join,
             weekPDSI = sum(value*weight/totalweight, na.rm = T)) %>% 
   ungroup() %>% 
   group_by(UID) %>% 
-  summarise("1980-2020 Mean" = mean(weekPDSI)) %>% 
+  summarise("1980-2020 Mean" = mean(weekPDSI, na.rm = T)) %>% 
   ungroup()
 
 write_rds(var.cbsa,"01_data/clean/b_drought.rds")

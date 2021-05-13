@@ -44,7 +44,7 @@ heatout <- heat %>%
   st_set_geometry(NULL) %>% 
   mutate(heatweight = heatdays*area_weighted, na.rm = T) %>% 
   group_by(UID) %>% 
-  summarise(heatdays = mean(heatweight)) %>% 
+  summarise(heatdays = mean(heatweight, na.rm = T)) %>% 
   ungroup()
 
 write_rds(heatout,"01_data/clean/a_heat.rds")

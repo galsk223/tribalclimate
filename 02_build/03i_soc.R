@@ -1,6 +1,18 @@
 
 rm(list = ls())
-tribedf <- read_rds("01_data/cache/tribe_shapefiles.rds") 
+t2 <- read_csv("01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
+  filter(time == "time 2") %>% 
+  dplyr::select(tribe,UID = census_tribe, rt) %>% 
+  mutate(UID = str_extract(UID,"\\d+")) %>% 
+  unique() %>% 
+  filter(!is.na(UID),
+         rt != "tribalsub")
+
+tribedf <- read_rds("01_data/cache/tribe_shapefiles.rds") %>% 
+  inner_join(.,t2,by="UID") %>% 
+  dplyr::select(tribe, everything())
+
+
 
 # from https://scholarsphere.psu.edu/resources/ea4b6c45-9eba-4b89-aba6-ff7246880fb1
 #  described https://github.com/aramcharan/US_SoilGrids100m
@@ -12,12 +24,23 @@ s030 <- raster("01_data/sl4.tif")
 sall <- stack(c(s000,s005,s015,s030))
 
 todo <- setdiff(1:nrow(tribedf),
-                str_extract(list.files("01_data/cache/soc"),"\\d+")) %>% 
+                str_extract(list.files("01_data/cache/soc2"),"\\d+")) %>% 
   as.numeric()
   
 n <- todo[1]
 
-# 20 hours
+# s000 <- raster("01_data/sl1.tif") 
+# 
+# toplot <- tibble(values = raster::values(s000))
+# tp2 <- toplot %>% 
+#   filter(!is.na(values)) %>% 
+#   sample_n(5000)
+#   
+# p <- ggplot(tp2, aes(values)) +
+#   geom_histogram()
+
+
+# 10 hours | range of 17 s to 90 m
 soc <- map(todo,function(n){
   
   extracted <- terra::extract(sall,tribedf[n,],
@@ -48,13 +71,13 @@ soc <- map(todo,function(n){
              valueweighted2 = valueaggregated2*weight,) %>% 
       summarise(Equal_5_15_30 = sum(valueweighted2, na.rm = T)) %>% 
       mutate(UID = tribedf$UID[n],
-             Interpolated_15 = r$coefficients[1]-r$coefficients[2]*15) %>% 
+             Interpolated_15_2 = r$coefficients[1]+r$coefficients[2]*15) %>% 
       dplyr::select(UID,everything())
     
-    write_rds(e1dt,paste0("01_data/cache/soc/",n,".rds"))
+    write_rds(e1dt,paste0("01_data/cache/soc2/",n,".rds"))
     
-    # print(n)
-    return(e1dt)
+    print(n)
+    # return(e1dt)
     
     }}
   

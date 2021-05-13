@@ -42,7 +42,7 @@ OGbasins <- read_rds("01_data/clean/g_OilGas_basins_county.rds") %>%
   st_set_geometry(NULL) 
 PAD <- read_rds("01_data/clean/h_federalland_county.rds")
 
-soc <- map_dfr(list.files("01_data/cache/soc_county", full.names = T),
+soc <- map_dfr(list.files("01_data/cache/soc_county2", full.names = T),
                function(fl){
                  
                  t <- read_rds(fl)

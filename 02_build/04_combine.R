@@ -29,14 +29,14 @@ OGbasins <- read_rds("01_data/clean/g_OilGas_basins.rds")
 PAD <- read_rds("01_data/clean/h_federalland.rds") %>% 
   mutate(PADPortion = as.numeric(PADPortion))
 
-soc <- map_dfr(list.files("01_data/cache/soc", full.names = T),
+soc <- map_dfr(list.files("01_data/cache/soc2", full.names = T),
                function(fl){
                  
                  t <- read_rds(fl)
                  
                }) %>% 
   group_by(UID) %>% 
-  summarise(SOC_mean = mean(Interpolated_15)) %>% 
+  summarise(SOC_perc = mean(Interpolated_15_2)/10) %>% 
   ungroup()
 
 all <- left_join(heat,drought,by="UID") %>% 

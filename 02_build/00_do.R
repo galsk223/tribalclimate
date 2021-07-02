@@ -14,7 +14,7 @@ library(furrr)
 
 
 # -------------------------------------------
-# tribe census polygons
+# T1 - tribe census polygons 
 # -------------------------------------------
 
 source("02_build/03a_heat_gridmet.R.R")
@@ -31,9 +31,27 @@ source("02_build/03i_soc.R")
 source("02_build/04_combine.R")
 
 
+# -------------------------------------------
+# T1 block polygons
+# -------------------------------------------
+
+source("02_build/03a_heat_gridmet_block.R.R")
+source("02_build/03b_drought_block.R")
+source("02_build/03c_precip_block.R")
+source("02_build/03d_whp_block.R")
+
+source("02_build/03e_elevation_ruggedness_block.R")
+source("02_build/03f_oilgas_wells_block.R")
+source("02_build/03g_oilgas_basins_block.R")
+source("02_build/03h_federallands_block.R")
+source("02_build/03i_soc_block.R")
+
+source("02_build/04_combine_block.R")
+
+
 
 # -------------------------------------------
-# tribe county polygons
+# T2 - tribe county polygons
 # -------------------------------------------
 
 source("02_build/03a_heat_gridmet_county.R")

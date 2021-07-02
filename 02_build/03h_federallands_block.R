@@ -49,38 +49,51 @@ tribedf <- read_rds("01_data/cache/tribe_shapefiles_micro.rds") %>%
   mutate(Area = st_area(geometry)) %>% 
   st_transform(4269)
 
-tribeusebuffed <- tribedf %>% 
-  st_transform(5070) %>% 
-  st_buffer(160.934) %>% 
-  mutate(BuffedArea = st_area(geometry))
+tribeuse <- tribedf %>% 
+  group_split(GEOID_county)
+
+t <- tribeuse[[1]]
 
 regions <- 1:10
 r <- 1
 
-pad <- map_dfr(regions,function(r){
+plan(multisession, workers = 4)
+future_map(tribeuse,function(t){
   
-  temp <- read_sf(paste0("01_data/PAD_raw/PADUS2_1_Region",r,"_Shapefile/",
-                         "PADUS2_1Combined_Tribal_DOD_Fee_Designation_Easement_Region",r,".shp")) %>% 
-    filter(Mang_Type == "FED")
+  tribeusebuffed <- t %>% 
+    st_transform(5070) %>% 
+    st_buffer(160.934) %>% 
+    mutate(BuffedArea = st_area(geometry))
   
-  PADtribe <- tribeusebuffed %>% 
-    st_intersection(st_buffer(temp,0),.) %>% 
-    mutate(PADArea = st_area(geometry),
-           PADPortion = PADArea/BuffedArea) %>% 
-    st_set_geometry(NULL) %>% 
-    dplyr::select(GEOID,BuffedArea,PADArea,PADPortion)
+  pad <- map_dfr(regions,function(r){
+    
+    temp <- read_sf(paste0("01_data/PAD_raw/PADUS2_1_Region",r,"_Shapefile/",
+                           "PADUS2_1Combined_Tribal_DOD_Fee_Designation_Easement_Region",r,".shp")) %>% 
+      filter(Mang_Type == "FED")
+    
+    PADtribe <- tribeusebuffed %>% 
+      st_intersection(st_buffer(temp,0),.) %>% 
+      mutate(PADArea = st_area(geometry),
+             PADPortion = PADArea/BuffedArea) %>% 
+      st_set_geometry(NULL) %>% 
+      dplyr::select(GEOID10,BuffedArea,PADArea,PADPortion)
+    
+    print(r)
+    return(PADtribe)
+    
+  })
   
-  print(r)
-  return(PADtribe)
+  write_rds(pad,paste0("01_data/cache/h_federallands/",unique(t$GEOID_county),".rds"))
+  
+})
+plan(sequential)
+gc()
+
+fl <- list.files("01_data/cache/h_federallands", full.names = T)
+save <- map_dfr(fl, function(f){
+  
+  r <- read_rds(f)
   
 })
 
-padsave <- pad %>% 
-  group_by(GEOID) %>% 
-  summarise(PADPortion = as.numeric(sum(PADArea)/sum(BuffedArea))) %>% 
-  ungroup() %>% 
-  left_join(tribeuse,.,by="GEOID") %>% 
-  st_set_geometry(NULL) %>% 
-  replace_na(list(PADPortion = 0))
-
-write_rds(padsave,"01_data/clean/h_federalland_county.rds")  
+write_rds(save,"01_data/clean/h_federallands_blocks.rds")

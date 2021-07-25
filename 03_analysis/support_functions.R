@@ -188,8 +188,9 @@ ols_clustered <- function(dep.var,df,clust.var){
   
   obs <- nobs(m.temp)
   
+  cov.out <- vcov(m.temp,cluster="tribe")
   
-  return(list(results=model.out,obs=obs))
+  return(list(results=model.out,obs=obs,cov=cov.out))
 }
 
 # dep.var = "heatdays_mean"

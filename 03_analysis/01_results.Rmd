@@ -7,7 +7,9 @@ header-includes:
    #- \usepackage[nomarkers,nolists]{endfloat}
    #- \renewcommand{\efloatseparator}{\mbox{}}
    #- \usepackage[printfigures]{figcaps}
-output: pdf_document
+output: 
+  pdf_document:
+    keep_tex: true
 ---
 
 ```{r setup, include = FALSE}
@@ -28,11 +30,11 @@ library(MASS)
 library(pscl)
 library(boot)
 library(nlme)
-library(cplm)
+#library(cplm)
 library(conflicted)
 library(fixest)
 library(stargazer)
-library(clubSandwich)
+#library(clubSandwich)
 library(srvyr)
 library(survey)
 library(janitor)
@@ -309,7 +311,8 @@ We assess the robustness of our estimate using several alternative model specifi
 \toprule
   & Historical (sq. km) & Present Day (sq. km)\\
 \midrule
-Cumulative Sum & 54,919,152 & 606,604\\
+Sum (Non-Coextensive) & 7,011,450 & 426,598 \\
+Sum (Coextensive) & 54,919,152 & 606,604\\
 Minimum & 538 & 0\\
 25th Percentile & 14,678 & 20\\
 Mean & 144,524 & 2,720\\
@@ -800,6 +803,7 @@ model.shell <- vector("list",4)
 dep.var <- "heatdays_mean"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+write_csv(as_tibble(model.shell[[1]]$cov),"heat_var.csv")
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
@@ -845,6 +849,7 @@ model.shell <- vector("list",4)
 dep.var <- "precip"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+write_csv(as_tibble(model.shell[[1]]$cov),"precip_var.csv")
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
@@ -867,6 +872,7 @@ model.shell <- vector("list",4)
 dep.var <- "whp"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+write_csv(as_tibble(model.shell[[1]]$cov),"whp_var.csv")
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))
@@ -961,6 +967,7 @@ model.shell <- vector("list",3)
 dep.var <- "BasinPortion"
 
 model.shell[[1]] <- ols_clustered(dep.var,df=data_long_m1,clust.var = c("tribe"))
+write_csv(as_tibble(model.shell[[1]]$cov),"og_var.csv")
 model.shell[[2]] <- ols_clustered(dep.var,df=data_long_m1_full,clust.var = c("tribe"))
 model.shell[[3]] <- ols_clustered(dep.var,df=data_long_m2_noOK,clust.var = c("tribe"))
 # model.shell[[4]] <- ols_clustered(dep.var,df=data_long_m3_OK,clust.var = c("tribe"))

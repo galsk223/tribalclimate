@@ -68,7 +68,7 @@ all <- map_dfr(files,function(fl){
 class(all)
 
 write_rds(all,"01_data/cache/tribe_shapefiles_micro.rds")
-write_rds(all,"/RSTOR/cache/tribe_shapefiles_micro.rds")
+# write_rds(all,"/RSTOR/cache/tribe_shapefiles_micro.rds")
 
 
 

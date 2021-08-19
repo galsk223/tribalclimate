@@ -5,6 +5,11 @@
 rm(list = ls())
 tribedf <- read_rds("01_data/cache/tribe_shapefiles.rds")
 
+if(!dir.exists("01_data/cache/heat_gridmet")){
+  dir.create("01_data/cache/heat_gridmet")
+}
+
+
 # download gridmet
 file.list <- expand.grid("tmmx",1979:2001,stringsAsFactors = F) %>% 
   rename(var=Var1,year=Var2) %>%

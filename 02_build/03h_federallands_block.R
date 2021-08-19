@@ -49,6 +49,13 @@ tribedf <- read_rds("01_data/cache/tribe_shapefiles_micro.rds") %>%
   mutate(Area = st_area(geometry)) %>% 
   st_transform(4269)
 
+
+if(!dir.exists("01_data/cache/h_federallands")){
+  dir.create("01_data/cache/h_federallands")
+}
+
+
+
 tribeuse <- tribedf %>% 
   group_split(GEOID_county)
 

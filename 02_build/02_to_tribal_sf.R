@@ -104,7 +104,7 @@ tareaw <- tall %>%
   mutate(area_weighted = as.numeric(area/UIDarea)) 
   
 write_rds(tareaw,"01_data/cache/tribe_shapefiles.rds")
-write_rds(tareaw,"/RSTOR/cache/tribe_shapefiles.rds")
+# write_rds(tareaw,"/RSTOR/cache/tribe_shapefiles.rds")
 
 
 
@@ -121,23 +121,23 @@ write_rds(tareaw,"/RSTOR/cache/tribe_shapefiles.rds")
 # for air_federal 
 #  using tribal block groups to match to census shapefiles
 # -----------------------------------
-
-air_fed <- tribe_df %>% 
-  filter(rt == "air_federal") %>% 
-  mutate(tribe_code = str_extract(tribe,"\\d+"),
-         tribe_name = str_sub(tribe,7,-1)) %>% 
-  select(tribe_code,tribe_name) %>% 
-  unique()
-
-t1 <- tigris::tribal_block_groups(class = "sf") %>% 
-  select(AIANNHCE,
-         Tribal_Tract = TTRACTCE,
-         Tribal_BlockGroup = TBLKGPCE,
-         GEOID) %>% 
-  inner_join(., air_fed, by = c("AIANNHCE" = "tribe_code"))
-
-t1b <- tigris::native_areas(class = "sf") %>% 
-  select(AIANNHCE,
-         GEOID) %>% 
-  inner_join(., air_fed, by = c("AIANNHCE" = "tribe_code")) 
+# 
+# air_fed <- tribe_df %>% 
+#   filter(rt == "air_federal") %>% 
+#   mutate(tribe_code = str_extract(tribe,"\\d+"),
+#          tribe_name = str_sub(tribe,7,-1)) %>% 
+#   select(tribe_code,tribe_name) %>% 
+#   unique()
+# 
+# t1 <- tigris::tribal_block_groups(class = "sf") %>% 
+#   select(AIANNHCE,
+#          Tribal_Tract = TTRACTCE,
+#          Tribal_BlockGroup = TBLKGPCE,
+#          GEOID) %>% 
+#   inner_join(., air_fed, by = c("AIANNHCE" = "tribe_code"))
+# 
+# t1b <- tigris::native_areas(class = "sf") %>% 
+#   select(AIANNHCE,
+#          GEOID) %>% 
+#   inner_join(., air_fed, by = c("AIANNHCE" = "tribe_code")) 
 

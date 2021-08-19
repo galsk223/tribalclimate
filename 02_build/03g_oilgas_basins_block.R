@@ -45,6 +45,13 @@ tribedf <- read_rds("01_data/cache/tribe_shapefiles_micro.rds") %>%
   mutate(Area = st_area(geometry)) %>% 
   st_transform(4269)
 
+
+if(!dir.exists("01_data/cache/g_OilGas_basins_block")){
+  dir.create("01_data/cache/g_OilGas_basins_block")
+}
+
+
+
 basins <- read_sf("01_data/SedimentaryBasins_US_EIA/SedimentaryBasins_US_May2011_v2.shp") %>% 
   st_transform(4269)
 

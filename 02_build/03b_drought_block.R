@@ -38,6 +38,12 @@ rm(list = ls())
 
 tribedf <- read_rds("01_data/cache/tribe_shapefiles_micro.rds")
 
+if(!dir.exists("01_data/cache/bridge_cache")){
+  dir.create("01_data/cache/bridge_cache")
+}
+if(!dir.exists("01_data/clean/b_drought_blocks")){
+  dir.create("01_data/clean/b_drought_blocks")
+}
 # download(url=str_c("http://www.northwestknowledge.net/metdata/data/pdsi.nc"),
 #          destfile = "01_data/pdsi.nc",
 #          mode = 'wb')

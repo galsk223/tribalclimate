@@ -50,27 +50,36 @@ conflict_prefer("select", "dplyr")
 #Load data
 t1 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
   filter(time == "time 1") %>% 
-  select(tribe,GEOID = fips, rt) %>% 
+  dplyr::select(tribe,GEOID = fips, rt) %>% 
   unique() 
 
 t2 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
   filter(time == "time 2") %>% 
-  select(tribe,UID = census_tribe, rt) %>% 
+  dplyr::select(tribe,UID = census_tribe, rt) %>% 
   mutate(UID = str_extract(UID,"\\d+")) %>% 
   unique() %>% 
   filter(!is.na(UID),
          !rt %in% c("tribalsub","sdtsa","tdsa"))
 
 df1 <- read_csv("../01_data/clean/00_all_countypolygons.csv") %>% 
-  select(-tribe) %>% 
+  dplyr::select(-tribe) %>% 
   unique() %>% 
   left_join(t1,.,by=c("GEOID")) %>% 
   mutate(time = "time 1",
          SOC_perc = SOC_mean/10)
 df2 <- read_csv("../01_data/clean/00_all_newpolygons.csv") %>% 
   inner_join(.,t2,by="UID") %>% 
-  select(tribe, everything()) %>% 
+  dplyr::select(tribe, everything()) %>% 
   mutate(time = "time 2") 
+# 
+# t2overlaps <- df2 %>% 
+#   dplyr::select(UID,tribe) %>% 
+#   group_by(UID) %>% 
+#   add_tally() %>% 
+#   ungroup() %>% 
+#   filter(n > 1)
+# 
+# write_csv(t2overlaps,"../01_data/t2overlaps.csv")
 
 data_long_bytribe <- bind_rows(df1,df2) %>% 
   select(tribe,GEOID,UID,time,everything()) %>% 

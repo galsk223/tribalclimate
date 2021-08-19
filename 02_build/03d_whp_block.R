@@ -38,6 +38,15 @@ Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio-server/bin/pandoc")
 
 rm(list = ls())
 
+if(!dir.exists("01_data/cache/d_whp_blocks")){
+  dir.create("01_data/cache/d_whp_blocks")
+}
+
+if(!dir.exists("01_data/clean/d_whp_blocks")){
+  dir.create("01_data/clean/d_whp_blocks")
+}
+
+
 # tribe_county <- tribedf[[1]]
   
 if (length(list.files("01_data/cache/d_whp_blocks"))<495){

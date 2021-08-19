@@ -3,6 +3,12 @@
 rm(list = ls())
 tribedf <- read_rds("01_data/cache/tribe_shapefiles.rds")
 
+
+if(!dir.exists("01_data/cache/extracted")){
+  dir.create("01_data/cache/extracted")
+}
+
+
 #Access data in Arc grid file
 whp <- raster("01_data/RDS-2015-0046-2/Data/whp_2018_classified/whp2018_cls/w001001.adf")
 

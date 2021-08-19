@@ -3,6 +3,13 @@ rm(list = ls())
 tribedf <- read_rds("01_data/cache/tribe_shapefiles.rds") %>% 
   st_transform(5070)
 
+
+if(!dir.exists("01_data/cache/elevationruggedness")){
+  dir.create("01_data/cache/elevationruggedness")
+}
+
+
+
 # t <- unique(tribedf$UID)[1]
 
 #Begin loop over counties

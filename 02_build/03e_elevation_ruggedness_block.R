@@ -39,6 +39,14 @@ Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio-server/bin/pandoc")
 
 rm(list = ls())
 
+
+if(!dir.exists("01_data/cache/e_elevrugg_blocks")){
+  dir.create("01_data/cache/e_elevrugg_blocks")
+}
+if(!dir.exists("01_data/clean/e_elevrugg_blocks")){
+  dir.create("01_data/clean/e_elevrugg_blocks")
+}
+
 tribedf <- read_rds("01_data/cache/tribe_shapefiles_micro.rds") %>% 
   filter(!state %in% c("02","15")) 
 

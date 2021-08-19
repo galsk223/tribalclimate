@@ -6,6 +6,11 @@ tribecounties <- tribedf %>%
   dplyr::select(GEOID) %>% 
   unique()
 
+
+if(!dir.exists("01_data/cache/soc_county2")){
+  dir.create("01_data/cache/soc_county2")
+}
+
 empty <- tribecounties %>% 
   mutate(area = as.numeric(st_area(geometry))) %>% 
   st_set_geometry(NULL) %>% 

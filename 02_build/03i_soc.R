@@ -13,6 +13,10 @@ tribedf <- read_rds("01_data/cache/tribe_shapefiles.rds") %>%
   dplyr::select(tribe, everything())
 
 
+if(!dir.exists("01_data/cache/soc2")){
+  dir.create("01_data/cache/soc2")
+}
+
 
 # from https://scholarsphere.psu.edu/resources/ea4b6c45-9eba-4b89-aba6-ff7246880fb1
 #  described https://github.com/aramcharan/US_SoilGrids100m

@@ -12,13 +12,25 @@ library(elevatr)
 library(furrr)
 
 
+if(!dir.exists("01_data")){
+  dir.create("01_data")
+}
+if(!dir.exists("01_data/clean")){
+  dir.create("01_data/clean")
+}
+if(!dir.exists("01_data/cache")){
+  dir.create("01_data/cache")
+}
+
+
 
 # -------------------------------------------
 # T1 - tribe census polygons 
 # -------------------------------------------
 
-source("02_build/03a_heat_gridmet.R.R")
+
 source("02_build/03b_drought.R")
+source("02_build/03a_heat_gridmet.R")
 source("02_build/03c_precip.R")
 source("02_build/03d_whp.R")
 
@@ -35,8 +47,9 @@ source("02_build/04_combine.R")
 # T1 block polygons
 # -------------------------------------------
 
-source("02_build/03a_heat_gridmet_block.R.R")
+
 source("02_build/03b_drought_block.R")
+source("02_build/03a_heat_gridmet_block.R")
 source("02_build/03c_precip_block.R")
 source("02_build/03d_whp_block.R")
 
@@ -54,8 +67,9 @@ source("02_build/04_combine_block.R")
 # T2 - tribe county polygons
 # -------------------------------------------
 
+
+source("02_build/03b_drought_county.R") 
 source("02_build/03a_heat_gridmet_county.R")
-source("02_build/03b_drought_county.R") # run again
 source("02_build/03c_precip_county.R")
 source("02_build/03d_whp_county.R")
 

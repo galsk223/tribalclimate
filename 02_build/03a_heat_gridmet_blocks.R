@@ -37,6 +37,11 @@ Sys.setenv(RSTUDIO_PANDOC="/usr/lib/rstudio-server/bin/pandoc")
 
 rm(list = ls())
 
+if(!dir.exists("01_data/clean/a_heat_blocks")){
+  dir.create("01_data/clean/a_heat_blocks")
+}
+
+
 # from https://www.arcgis.com/home/item.html?id=680e87c5b1d34e0585203aa4f67d8426
 
 # tribedf <- read_rds("01_data/cache/tribe_shapefiles_micro.rds")

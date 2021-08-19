@@ -44,6 +44,19 @@ tribedf <- read_rds("01_data/cache/tribe_shapefiles_micro.rds") %>%
   filter(!state %in% c("02","15")) %>% 
   group_split(GEOID_county)
 
+
+if(!dir.exists("01_data/cache/c_precip_blocks")){
+  dir.create("01_data/cache/c_precip_blocks")
+}
+
+if(!dir.exists("01_data/clean/c_precip_blocks")){
+  dir.create("01_data/clean/c_precip_blocks")
+}
+
+
+
+
+
 prism <- raster("01_data/PRISM_ppt_30yr_normal_4kmM2_annual_asc/PRISM_ppt_30yr_normal_4kmM2_annual_asc.asc")
 
 slicecoords <- tibble(lon = xyFromCell(prism, 1:ncell(prism))[,1],

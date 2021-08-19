@@ -42,6 +42,11 @@ rm(list = ls())
 tribedf <- read_rds("01_data/cache/tribe_shapefiles_micro.rds") %>% 
   filter(!state %in% c("02","15"))
 
+
+if(!dir.exists("01_data/cache/i_soc_block")){
+  dir.create("01_data/cache/i_soc_block")
+}
+
 # from https://scholarsphere.psu.edu/resources/ea4b6c45-9eba-4b89-aba6-ff7246880fb1
 #  described https://github.com/aramcharan/US_SoilGrids100m
 

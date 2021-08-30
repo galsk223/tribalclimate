@@ -65,21 +65,56 @@ all <- tribedf %>%
   left_join(.,PAD,by="GEOID") %>% 
   left_join(.,soc,by="GEOID") 
 
-sums <- all %>% 
-  dplyr::select(-contains(c("q25","q75","sd","min","median","max","GEOID","tribe"))) %>% 
-  summarise_all(list(
-                   N = ~sum(!is.na(.)),
-                   Min = ~min(., na.rm = T),
-                   Mean = ~mean(., na.rm = T),
-                   Max = ~max(., na.rm = T))) %>% 
-  pivot_longer(everything()) %>% 
-  mutate(Stat = str_remove(str_extract(name,"_N|_Min|_Mean|_Max"),"_"),
-         Variable = str_remove(str_remove(name,"_N|_Min|_Mean|_Max"),"_"),
-         value = round(value,3)) %>% 
-  pivot_wider(-name,
-              names_from = Stat)
 
-write_csv(all,"01_data/clean/00_all_countypolygons.csv")
+# Rename fields, drop units, replace NAs when appropriate
+final_ds <- all %>%
+  select(tribe,
+         GEOID,
+         heatdays=heatdays_mean,
+         drought=drought_mean,
+         precip,
+         whp=whp_mean,
+         oil_portion=AllArea_OilPortion,
+         gas_portion=AllArea_GasPortion,
+         og_basin_portion=BasinPortion,
+         federal_lands_portion=PADPortion,
+         soc=SOC_mean,
+         elevation=elevation_mean,
+         tri=tri_mean) %>%
+  inner_join(tigris::fips_codes %>% 
+               mutate(GEOID=str_c(state_code,county_code),
+                      county=str_remove(county,"County")) %>% 
+               select(GEOID,state,county),.,
+             by="GEOID")
+
+write_csv(final_ds,"01_data/clean/tribal_dispossession_county.csv")
+write_csv(final_ds,"/RSTOR/tribal_climate/data_products/tribal_dispossession_county.csv")
+
+
+us_co <- USAboundaries::us_counties(resolution = "low")
+
+# Append geography and export as geopackage
+final_ds_geo <- inner_join(select(us_co,GEOID=geoid),final_ds,by="GEOID")
+
+write_sf(final_ds_geo,"01_data/clean/tribal_dispossession_county.gpkg")
+
+
+
+
+# sums <- all %>% 
+#   dplyr::select(-contains(c("q25","q75","sd","min","median","max","GEOID","tribe"))) %>% 
+#   summarise_all(list(
+#                    N = ~sum(!is.na(.)),
+#                    Min = ~min(., na.rm = T),
+#                    Mean = ~mean(., na.rm = T),
+#                    Max = ~max(., na.rm = T))) %>% 
+#   pivot_longer(everything()) %>% 
+#   mutate(Stat = str_remove(str_extract(name,"_N|_Min|_Mean|_Max"),"_"),
+#          Variable = str_remove(str_remove(name,"_N|_Min|_Mean|_Max"),"_"),
+#          value = round(value,3)) %>% 
+#   pivot_wider(-name,
+#               names_from = Stat)
+
 
 
 

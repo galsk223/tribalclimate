@@ -48,12 +48,12 @@ conflict_prefer("select", "dplyr")
 
 #######################
 #Load data
-t1 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
+t1 <- read_csv("../01_data/cache/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
   filter(time == "time 1") %>% 
   dplyr::select(tribe,GEOID = fips, rt) %>% 
   unique() 
 
-t2 <- read_csv("../01_data/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
+t2 <- read_csv("../01_data/cache/tribe_bg_full_integrated_combined_FINAL.csv") %>% 
   filter(time == "time 2") %>% 
   dplyr::select(tribe,UID = census_tribe, rt) %>% 
   mutate(UID = str_extract(UID,"\\d+")) %>% 
@@ -145,6 +145,7 @@ data_long_m1 <- data_t1and2_long_bytribe %>%
 
 write_rds(data_long_m1,"data_long.rds")
 write_rds(data_long_m1_full,"data_long_all.rds")
+
 
 source("support_functions.R")
 data_long_m2_noOK <- df_subset(c("air_federal","air_state"))
